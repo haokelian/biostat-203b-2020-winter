@@ -1,7 +1,7 @@
 ---
-title: "hw1.2"
-author: "hk"
-date: "2020/1/16"
+title: "Homework 1 Solution"
+author: "Haoke Lian (605266888)"
+date: "2020/1/19"
 output: html_document
 ---
 
@@ -28,3 +28,55 @@ plot(pressure)
 ```
 
 Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+
+
+## Q2
+
+**Here is a screenshot of my completion report:**
+<p align="center">
+  <img src="./Completion Report.png">
+</p>
+
+
+3. The output is listed below the script
+```{bash}
+for datafile in /home/203bdata/mimic-iii/*.csv
+  do
+    ls $datafile
+  done
+
+```
+
+Numbers of lines and file names are listed in the same order:
+```{bash}
+
+ for datafile in /home/203bdata/mimic-iii/*.csv
+  do
+    wc -l $datafile
+  done
+```
+
+4. The first 10 lines of ADMISSIONS.csv are:
+```{bash}
+  head /home/203bdata/mimic-iii/ADMISSIONS.csv
+```
+
+The last 10 lines of ADMISSIONS.csv are:
+```{bash}
+  tail /home/203bdata/mimic-iii/ADMISSIONS.csv
+```
+
+<!-- calculate the number of rows by head and tile -->
+The number of rows = 58598 - 21 + 1 = 58578
+The number of patients = 98813 - 22 + 1 = 98792
+
+```{bash}
+
+```
+
+The possible values of each variable are:
+  INSURANCE: Private / Medicare
+  LANGUAGE: UNOBTAINABLE / ENGL / PROTESTANT QUAKER
+  RELIGION: CATHOLIC / 
+  MARRIED / SINGLE / 
