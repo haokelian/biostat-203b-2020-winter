@@ -1,7 +1,13 @@
 ---
+<<<<<<< HEAD:hw1/hw1sol.Rmd
 title: "Homework 1 Solution"
 author: "Haoke Lian (605266888)"
 date: "2020/1/19"
+=======
+title: "hw1.1"
+author: "hk"
+date: "2020/1/16"
+>>>>>>> 056cd28f714360b4a39fa188e919d53b1411eb94:hw1/hw1.1sol.Rmd
 output: html_document
 ---
 
