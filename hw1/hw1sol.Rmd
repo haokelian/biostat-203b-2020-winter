@@ -75,12 +75,61 @@ The possible values of each variable are listed below:
      awk -F, '{ print $14 }' /home/203bdata/mimic-iii/ADMISSIONS.csv | tail -n +2 | sort | uniq
 ```
   
-  
+## Q3
+
+1. First, get the txt:
+```{bash,eval=FALSE}
+    curl http://www.gutenberg.org/cache/epub/42671/pg42671.txt > pride_and_prejudice.txt
+```
+
+The tabulate of times of main characters mentioned is listed as below:
+```{bash}
+    printf 'Name       ''Times Metioned\n'
+    for name in 'Elizabeth' 'Darcy' 'Jane' 'Lydia'
+      do count=$(grep -o $name pride_and_prejudice.txt | wc -l)
+      printf '%-15s%-10s\n' $name $count
+      done
+```
+
+2. The output of two commands are text files with the same content:
+```{bash, eval=FALSE}
+    echo 'hello, world' > test1.txt
+```
+The first command means that everything that's in "test1.txt" will be deleted, and "hello world" will be written to it (which means that "hello world" will be right at the beginning of "test1.txt".
+
+```{bash, eval=FALSE}
+    echo 'hello, world' >> test2.txt
+```
+The second command means that "hello, world" will be appended to "test2.txt", so nothing will be deleted from "test2.txt", and "hello, world will be at the end of "test2.txt".
+
+3. 
+Start the editor `vi` and save the file as `middle.sh`. Then use `chmod 755 middle.sh`.
+
+Excute the file to output middle lines.
+```{bash}
+    cd ~
+    ./middle.sh pride_and_prejudice.txt 20 5
+```
+
+Command line arguments are accessed using numeric indexes inside a shell script preceded with a dollar($) sign. That is, first argument can be referred as $1, second as $2 and third as $3.
+
+In this case, meanings that the variables stand for are listed as below:
+`$1` stands for row number of end of lines presented. 
+`$2` stands for name of the file in which presented lines are`./pride_and_prejudice.txt`
+`$3` stands for number of middle lines presented. 
+
+The first line `#!/bin/sh` selects the `sh` shell. Problems arise when not using `#!/bin/sh` because the script-maker assumes the link is to bash as the default, but they function differently.
+
 ## Q4
 
 1. This is my `runSim.R`code:
 ```{bash}
-cat runSim.R
+    cat runSim.R
+```
+
+2. First, quote the runSim.R in bash shell.
+```{bash}
+    Rscript runSim.R n=100 dist=\"gaussian\" seed=203 rep=50
 ```
 
 <!--
@@ -91,3 +140,13 @@ run in teaching server terminal to submit:
   git tag
   git push --tags  
 -->
+
+3. Call autoSim.R and generate simulation data.
+```{bash}
+    Rscript autoSim.R
+```
+
+Print the data to the table
+| $n$ | Method   | Gaussian | $t_5$ | $t_1$ |
+|-----|----------|-------|-------|----------|
+for n (100, 1000, by=100)
