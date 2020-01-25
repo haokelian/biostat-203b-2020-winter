@@ -642,6 +642,12 @@ summary {
 <li>First, get the txt:</li>
 </ol>
 <pre class="bash"><code>    curl http://www.gutenberg.org/cache/epub/42671/pg42671.txt &gt; pride_and_prejudice.txt</code></pre>
+<pre><code>##   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+##                                  Dload  Upload   Total   Spent    Left  Speed
+## 
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+ 32  708k   32  230k    0     0   308k      0  0:00:02 --:--:--  0:00:02  307k
+100  708k  100  708k    0     0   631k      0  0:00:01  0:00:01 --:--:--  632k</code></pre>
 <p>The tabulate of times of main characters mentioned is listed as below:</p>
 <pre class="bash"><code>    printf 'Name       ''Times Metioned\n'
     for name in 'Elizabeth' 'Darcy' 'Jane' 'Lydia'
@@ -649,14 +655,10 @@ summary {
       printf '%-15s%-10s\n' $name $count
       done</code></pre>
 <pre><code>## Name       Times Metioned
-## grep: pride_and_prejudice.txt: No such file or directory
-## Elizabeth      0         
-## grep: pride_and_prejudice.txt: No such file or directory
-## Darcy          0         
-## grep: pride_and_prejudice.txt: No such file or directory
-## Jane           0         
-## grep: pride_and_prejudice.txt: No such file or directory
-## Lydia          0</code></pre>
+## Elizabeth      634       
+## Darcy          417       
+## Jane           294       
+## Lydia          170</code></pre>
 <ol start="2" style="list-style-type: decimal">
 <li>The output of two commands are text files with the same content:</li>
 </ol>
@@ -678,6 +680,8 @@ summary {
 <p>Command line arguments are accessed using numeric indexes inside a shell script preceded with a dollar($) sign. That is, first argument can be referred as $1, second as $2 and third as $3.</p>
 <p>In this case, meanings that the variables stand for are listed as below: <code>$1</code> stands for row number of end of lines presented. <code>$2</code> stands for name of the file in which presented lines are<code>./pride_and_prejudice.txt</code> <code>$3</code> stands for number of middle lines presented.</p>
 <p>The first line <code>#!/bin/sh</code> selects the <code>sh</code> shell. Problems arise when not using <code>#!/bin/sh</code> because the script-maker assumes the link is to bash as the default, but they function differently.</p>
+<p>Then delete the file.</p>
+<pre class="bash"><code>    rm pride_and_prejudice.txt</code></pre>
 </div>
 <div id="q4" class="section level2">
 <h2>Q4</h2>
@@ -737,20 +741,36 @@ summary {
 ##   msePrimeAvg = msePrimeAvg + estMeanPrimes(x)^2
 ## }
 ## 
-## cat(mseSampAvg/rep,&quot;\t&quot;,msePrimeAvg/rep)</code></pre>
-<ol start="2" style="list-style-type: decimal">
-<li>First, quote the runSim.R in bash shell.</li>
-</ol>
+## cat(msePrimeAvg/rep,&quot;\t&quot;,mseSampAvg/rep,&quot;\n&quot;)</code></pre>
+<p>Quote the runSim.R in bash shell. Output MSEs of primed-indexed average estimator and the classical sample average.</p>
 <pre class="bash"><code>    Rscript runSim.R n=100 dist=\&quot;gaussian\&quot; seed=203 rep=50</code></pre>
-<pre><code>## 0.01146443    0.03926458</code></pre>
-<!--
-run in teaching server terminal to submit:
-  git check out master
-  git merge develop
-  git tag hw1
-  git tag
-  git push --tags  
--->
+<pre><code>## 0.03926458    0.01146443</code></pre>
+<ol start="2" style="list-style-type: decimal">
+<li>This is my <code>autoSim.R</code>code:</li>
+</ol>
+<pre class="bash"><code>    cat autoSim.R</code></pre>
+<pre><code>## ## The code is used for automatic simulation based on given seed and number of replicates
+## ## Arguments: nVals (sample size), disTypes (distribution)
+## ##            seed (random seed by input) and rep (number of replicates by input)
+## ## Output: report the average mean squared error (MSE)
+## ##         of primed-indexed average estimator  and the classical sample average estimator
+## 
+## ## generate sample sizes and distribution types automatically
+## nVals &lt;- seq(100, 500, by=100)
+## distTypes = c(&quot;gaussian&quot;, &quot;t1&quot;, &quot;t5&quot;)
+## seed &lt;- 203
+## rep &lt;- 50
+## 
+## ## simulate with runSim.R
+## for (dist in distTypes){
+##   for (n in nVals) {
+##     arg &lt;- paste(&quot;n=&quot;, n, &quot; dist=&quot;, shQuote(shQuote(dist)),&quot; seed=&quot;, seed, &quot; rep=&quot;, rep, sep=&quot;&quot;)
+##     oFile &lt;- paste(&quot;n_&quot;, n,&quot;_dist_&quot;, dist, &quot;.txt&quot;, sep=&quot;&quot;)
+##     sysCall &lt;- paste(&quot;nohup Rscript runSim.R &quot;, arg, &quot; &gt; &quot;, oFile, sep=&quot;&quot;)
+##     system(sysCall, wait = FALSE)
+##    print(paste(&quot;sysCall=&quot;, sysCall, sep=&quot;&quot;))
+##   }
+## }</code></pre>
 <ol start="3" style="list-style-type: decimal">
 <li>Call autoSim.R and generate simulation data.</li>
 </ol>
@@ -760,32 +780,86 @@ run in teaching server terminal to submit:
 ## [1] &quot;sysCall=nohup Rscript runSim.R n=300 dist=\&quot;'gaussian'\&quot; seed=203 rep=50 &gt; n_300_dist_gaussian.txt&quot;
 ## [1] &quot;sysCall=nohup Rscript runSim.R n=400 dist=\&quot;'gaussian'\&quot; seed=203 rep=50 &gt; n_400_dist_gaussian.txt&quot;
 ## [1] &quot;sysCall=nohup Rscript runSim.R n=500 dist=\&quot;'gaussian'\&quot; seed=203 rep=50 &gt; n_500_dist_gaussian.txt&quot;
-## [1] &quot;sysCall=nohup Rscript runSim.R n=600 dist=\&quot;'gaussian'\&quot; seed=203 rep=50 &gt; n_600_dist_gaussian.txt&quot;
-## [1] &quot;sysCall=nohup Rscript runSim.R n=700 dist=\&quot;'gaussian'\&quot; seed=203 rep=50 &gt; n_700_dist_gaussian.txt&quot;
-## [1] &quot;sysCall=nohup Rscript runSim.R n=800 dist=\&quot;'gaussian'\&quot; seed=203 rep=50 &gt; n_800_dist_gaussian.txt&quot;
-## [1] &quot;sysCall=nohup Rscript runSim.R n=900 dist=\&quot;'gaussian'\&quot; seed=203 rep=50 &gt; n_900_dist_gaussian.txt&quot;
-## [1] &quot;sysCall=nohup Rscript runSim.R n=1000 dist=\&quot;'gaussian'\&quot; seed=203 rep=50 &gt; n_1000_dist_gaussian.txt&quot;
 ## [1] &quot;sysCall=nohup Rscript runSim.R n=100 dist=\&quot;'t1'\&quot; seed=203 rep=50 &gt; n_100_dist_t1.txt&quot;
 ## [1] &quot;sysCall=nohup Rscript runSim.R n=200 dist=\&quot;'t1'\&quot; seed=203 rep=50 &gt; n_200_dist_t1.txt&quot;
 ## [1] &quot;sysCall=nohup Rscript runSim.R n=300 dist=\&quot;'t1'\&quot; seed=203 rep=50 &gt; n_300_dist_t1.txt&quot;
 ## [1] &quot;sysCall=nohup Rscript runSim.R n=400 dist=\&quot;'t1'\&quot; seed=203 rep=50 &gt; n_400_dist_t1.txt&quot;
 ## [1] &quot;sysCall=nohup Rscript runSim.R n=500 dist=\&quot;'t1'\&quot; seed=203 rep=50 &gt; n_500_dist_t1.txt&quot;
-## [1] &quot;sysCall=nohup Rscript runSim.R n=600 dist=\&quot;'t1'\&quot; seed=203 rep=50 &gt; n_600_dist_t1.txt&quot;
-## [1] &quot;sysCall=nohup Rscript runSim.R n=700 dist=\&quot;'t1'\&quot; seed=203 rep=50 &gt; n_700_dist_t1.txt&quot;
-## [1] &quot;sysCall=nohup Rscript runSim.R n=800 dist=\&quot;'t1'\&quot; seed=203 rep=50 &gt; n_800_dist_t1.txt&quot;
-## [1] &quot;sysCall=nohup Rscript runSim.R n=900 dist=\&quot;'t1'\&quot; seed=203 rep=50 &gt; n_900_dist_t1.txt&quot;
-## [1] &quot;sysCall=nohup Rscript runSim.R n=1000 dist=\&quot;'t1'\&quot; seed=203 rep=50 &gt; n_1000_dist_t1.txt&quot;
 ## [1] &quot;sysCall=nohup Rscript runSim.R n=100 dist=\&quot;'t5'\&quot; seed=203 rep=50 &gt; n_100_dist_t5.txt&quot;
 ## [1] &quot;sysCall=nohup Rscript runSim.R n=200 dist=\&quot;'t5'\&quot; seed=203 rep=50 &gt; n_200_dist_t5.txt&quot;
 ## [1] &quot;sysCall=nohup Rscript runSim.R n=300 dist=\&quot;'t5'\&quot; seed=203 rep=50 &gt; n_300_dist_t5.txt&quot;
 ## [1] &quot;sysCall=nohup Rscript runSim.R n=400 dist=\&quot;'t5'\&quot; seed=203 rep=50 &gt; n_400_dist_t5.txt&quot;
-## [1] &quot;sysCall=nohup Rscript runSim.R n=500 dist=\&quot;'t5'\&quot; seed=203 rep=50 &gt; n_500_dist_t5.txt&quot;
-## [1] &quot;sysCall=nohup Rscript runSim.R n=600 dist=\&quot;'t5'\&quot; seed=203 rep=50 &gt; n_600_dist_t5.txt&quot;
-## [1] &quot;sysCall=nohup Rscript runSim.R n=700 dist=\&quot;'t5'\&quot; seed=203 rep=50 &gt; n_700_dist_t5.txt&quot;
-## [1] &quot;sysCall=nohup Rscript runSim.R n=800 dist=\&quot;'t5'\&quot; seed=203 rep=50 &gt; n_800_dist_t5.txt&quot;
-## [1] &quot;sysCall=nohup Rscript runSim.R n=900 dist=\&quot;'t5'\&quot; seed=203 rep=50 &gt; n_900_dist_t5.txt&quot;
-## [1] &quot;sysCall=nohup Rscript runSim.R n=1000 dist=\&quot;'t5'\&quot; seed=203 rep=50 &gt; n_1000_dist_t5.txt&quot;</code></pre>
-<p>Print the data to the table | <span class="math inline">\(n\)</span> | Method | Gaussian | <span class="math inline">\(t_5\)</span> | <span class="math inline">\(t_1\)</span> | |—–|———-|——-|——-|———-| for n (100, 1000, by=100)</p>
+## [1] &quot;sysCall=nohup Rscript runSim.R n=500 dist=\&quot;'t5'\&quot; seed=203 rep=50 &gt; n_500_dist_t5.txt&quot;</code></pre>
+<p>Table.R is shown as below.</p>
+<pre class="bash"><code>    cat Table.R</code></pre>
+<pre><code>## ## This code is used to report outputs of autoSim.R in a form of table
+## 
+## ## count output files of autoSim in folder
+## wd = getwd()
+## fileName &lt;- dir(wd,pattern='n*.txt')
+## fileNum &lt;- length(fileName)
+## rowNum &lt;- fileNum/3
+## 
+## ## initiate arguments and vectors
+## distTypes = c(&quot;gaussian&quot;, &quot;t1&quot;, &quot;t5&quot;)
+## N &lt;- c()
+## N_ &lt;- c()
+## data_1 &lt;- c()
+## data_2 &lt;- c()
+## data_3 &lt;- c()
+## datalist_1 &lt;- c()
+## datalist_2 &lt;- c()
+## datalist_3 &lt;- c()
+## MSE &lt;- c()
+## 
+## ## store MSE data of different distTypes and sample sizes separately
+## for (n in 1:10000){
+##   for (d in distTypes){
+##     Fname &lt;- paste(&quot;n_&quot;,n,&quot;_dist_&quot;,d,&quot;.txt&quot;,sep=&quot;&quot;)
+##     if (file.exists(Fname)==TRUE){
+##       MSE &lt;- tryCatch(read.table(Fname,header=FALSE))
+##       if (d==&quot;gaussian&quot;){
+##         data_1 &lt;- t(MSE)
+##         datalist_1 &lt;- c(datalist_1,data_1)
+##       }else if (d==&quot;t1&quot;){
+##         data_2 &lt;- t(MSE)
+##         datalist_2 &lt;- c(datalist_2,data_2)
+##       }else if (d==&quot;t5&quot;){
+##         data_3 &lt;- t(MSE)
+##         datalist_3 &lt;- c(datalist_3,data_3)
+##       }
+##       # store sample sizes
+##       N &lt;- c(N,rep(n,2))
+##     }
+##   }
+## }
+## 
+## # delete repeating N numbers
+## for (r in 1:(fileNum*2)){
+##   if (floor(r/3)==r/3){
+##     N_[r/3] = N[r]
+##   }
+## }
+## 
+## # set 2nd column by replication
+## M &lt;- rep(c('PrimeAvg','SampAvg'),rowNum)
+## 
+## # stitch the table and present
+## table &lt;- data.frame(n=N_,Method=M,Gaussian=datalist_1,t1=datalist_2,t5=datalist_3)
+## print(table)</code></pre>
+<p>Then report the average MSEs with a table:</p>
+<pre class="bash"><code>    Rscript Table.R</code></pre>
+<pre><code>##      n   Method    Gaussian        t1          t5
+## 1  100 PrimeAvg 0.039264580  43.72672 0.047281910
+## 2  100  SampAvg 0.011464430  26.76927 0.011320570
+## 3  200 PrimeAvg 0.024001610  20.91532 0.043965280
+## 4  200  SampAvg 0.005764383  43.41982 0.006573672
+## 5  300 PrimeAvg 0.020514360 116.39670 0.042466820
+## 6  300  SampAvg 0.004199221 138.45650 0.004420692
+## 7  400 PrimeAvg 0.013456000  48.29149 0.027956910
+## 8  400  SampAvg 0.002870221  76.24066 0.003922553
+## 9  500 PrimeAvg 0.009396678 152.80850 0.019900230
+## 10 500  SampAvg 0.002191460  53.47290 0.003111203</code></pre>
 </div>
 
 

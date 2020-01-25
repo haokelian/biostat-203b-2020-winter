@@ -86,7 +86,7 @@ The possible values of each variable are listed below:
 ## Q3
 
 1. First, get the txt:
-```{bash,eval=FALSE}
+```{bash}
     curl http://www.gutenberg.org/cache/epub/42671/pg42671.txt > pride_and_prejudice.txt
 ```
 
