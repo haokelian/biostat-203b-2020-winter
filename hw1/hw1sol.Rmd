@@ -151,15 +151,6 @@ Quote the runSim.R in bash shell. Output MSEs of primed-indexed average estimato
     cat autoSim.R
 ```
 
-<!--
-run in teaching server terminal to submit:
-  git check out master
-  git merge develop
-  git tag hw1
-  git tag
-  git push --tags  
--->
-
 3. Call autoSim.R and generate simulation data.
 ```{bash}
     Rscript autoSim.R
