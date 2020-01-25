@@ -4,11 +4,8 @@
 ## Output: report the average mean squared error (MSE)
 ##         of primed-indexed average estimator  and the classical sample average estimator
 
-## setwd("/home/hk_lian/biostat-203b-2020-winter/hw1")
-## parsing command arguments
-
 ## generate sample sizes and distribution types automatically
-nVals <- seq(100, 1000, by=100)
+nVals <- seq(100, 500, by=100)
 distTypes = c("gaussian", "t1", "t5")
 seed <- 203
 rep <- 50

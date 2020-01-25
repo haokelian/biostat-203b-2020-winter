@@ -75,6 +75,14 @@ The possible values of each variable are listed below:
      awk -F, '{ print $14 }' /home/203bdata/mimic-iii/ADMISSIONS.csv | tail -n +2 | sort | uniq
 ```
   
+  The number of Hispanic patients are calculated the number of `HISPANIC` in the colume of `ETHNICITY`
+```{bash}
+    awk -F, '{ print $14 }' /home/203bdata/mimic-iii/ADMISSIONS.csv | tail -n +2 | sort | grep -o HISPANIC | wc -l
+```
+
+
+
+
 ## Q3
 
 1. First, get the txt:
@@ -120,6 +128,12 @@ In this case, meanings that the variables stand for are listed as below:
 
 The first line `#!/bin/sh` selects the `sh` shell. Problems arise when not using `#!/bin/sh` because the script-maker assumes the link is to bash as the default, but they function differently.
 
+Then delete the file.
+```{bash}
+    rm pride_and_prejudice.txt
+```
+
+
 ## Q4
 
 1. This is my `runSim.R`code:
@@ -127,14 +141,19 @@ The first line `#!/bin/sh` selects the `sh` shell. Problems arise when not using
     cat runSim.R
 ```
 
-2. First, quote the runSim.R in bash shell.
+Quote the runSim.R in bash shell. Output MSEs of primed-indexed average estimator and the classical sample average.
 ```{bash}
     Rscript runSim.R n=100 dist=\"gaussian\" seed=203 rep=50
 ```
 
+2. This is my `autoSim.R`code:
+```{bash}
+    cat autoSim.R
+```
+
 <!--
 run in teaching server terminal to submit:
-  git checkout master
+  git check out master
   git merge develop
   git tag hw1
   git tag
@@ -144,9 +163,13 @@ run in teaching server terminal to submit:
 3. Call autoSim.R and generate simulation data.
 ```{bash}
     Rscript autoSim.R
-```
+````
+Table.R is shown as below.
+```{bash}
+    cat Table.R
+````
 
-Print the data to the table
-| $n$ | Method   | Gaussian | $t_5$ | $t_1$ |
-|-----|----------|-------|-------|----------|
-for n (100, 1000, by=100)
+Then report the average MSEs with a table:
+```{bash}
+    Rscript Table.R
+````

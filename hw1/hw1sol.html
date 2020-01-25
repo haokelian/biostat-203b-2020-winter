@@ -469,85 +469,323 @@ summary {
 <pre class="bash"><code>   awk 'END { print NR }' /home/203bdata/mimic-iii/ADMISSIONS.csv</code></pre>
 <pre><code>## 58977</code></pre>
 <p>The number of patients by calcualting number of different subject ID</p>
-<pre class="bash"><code>    sort -u -t  ',' -k 2 /home/203bdata/mimic-iii/ADMISSIONS.csv | tail -n +2 | awk 'END {print NR}'</code></pre>
-<pre><code>## 58976</code></pre>
-<p>The possible values of each variable are listed below: INSURANCE: Private / Medicare</p>
+<pre class="bash"><code>    awk -F, '{ print $2 }' /home/203bdata/mimic-iii/ADMISSIONS.csv | tail -n +2 | sort | uniq | awk 'END {print NR}'</code></pre>
+<pre><code>## 46520</code></pre>
+<p>The possible values of each variable are listed below: INSURANCE:</p>
 <pre class="bash"><code>     awk -F, '{ print $10 }' /home/203bdata/mimic-iii/ADMISSIONS.csv | tail -n +2 | sort | uniq</code></pre>
 <pre><code>## &quot;Government&quot;
 ## &quot;Medicaid&quot;
 ## &quot;Medicare&quot;
 ## &quot;Private&quot;
 ## &quot;Self Pay&quot;</code></pre>
-<p>LANGUAGE: UNOBTAINABLE / ENGL / PROTESTANT QUAKER</p>
-<pre class="bash"><code>     awk -F, '{ print $10 }' /home/203bdata/mimic-iii/ADMISSIONS.csv | tail -n +2 | sort | uniq</code></pre>
-<pre><code>## &quot;Government&quot;
-## &quot;Medicaid&quot;
-## &quot;Medicare&quot;
-## &quot;Private&quot;
-## &quot;Self Pay&quot;</code></pre>
-<p>RELIGION: CATHOLIC / MARRIED / SINGLE /</p>
+<p>LANGUAGE:</p>
+<pre class="bash"><code>     awk -F, '{ print $11 }' /home/203bdata/mimic-iii/ADMISSIONS.csv | tail -n +2 | sort | uniq</code></pre>
+<pre><code>## 
+## &quot;ALBA&quot;
+## &quot;AMER&quot;
+## &quot;*AMH&quot;
+## &quot;*ARA&quot;
+## &quot;ARAB&quot;
+## &quot;*ARM&quot;
+## &quot;* BE&quot;
+## &quot;*BEN&quot;
+## &quot;BENG&quot;
+## &quot;*BOS&quot;
+## &quot;*BUL&quot;
+## &quot;*BUR&quot;
+## &quot;CAMB&quot;
+## &quot;*CAN&quot;
+## &quot;CANT&quot;
+## &quot;CAPE&quot;
+## &quot;*CDI&quot;
+## &quot;*CHI&quot;
+## &quot;*CRE&quot;
+## &quot;*DEA&quot;
+## &quot;*DUT&quot;
+## &quot;ENGL&quot;
+## &quot;ETHI&quot;
+## &quot;*FAR&quot;
+## &quot;*FIL&quot;
+## &quot;FREN&quot;
+## &quot;* FU&quot;
+## &quot;*FUL&quot;
+## &quot;GERM&quot;
+## &quot;GREE&quot;
+## &quot;*GUJ&quot;
+## &quot;HAIT&quot;
+## &quot;HIND&quot;
+## &quot;*HUN&quot;
+## &quot;*IBO&quot;
+## &quot;ITAL&quot;
+## &quot;JAPA&quot;
+## &quot;*KHM&quot;
+## &quot;KORE&quot;
+## &quot;LAOT&quot;
+## &quot;*LEB&quot;
+## &quot;*LIT&quot;
+## &quot;*MAN&quot;
+## &quot;MAND&quot;
+## &quot;*MOR&quot;
+## &quot;*NEP&quot;
+## &quot;*PER&quot;
+## &quot;PERS&quot;
+## &quot;*PHI&quot;
+## &quot;POLI&quot;
+## &quot;PORT&quot;
+## &quot;PTUN&quot;
+## &quot;*PUN&quot;
+## &quot;*ROM&quot;
+## &quot;*RUS&quot;
+## &quot;RUSS&quot;
+## &quot;SERB&quot;
+## &quot;**SH&quot;
+## &quot;SOMA&quot;
+## &quot;*SPA&quot;
+## &quot;SPAN&quot;
+## &quot;** T&quot;
+## &quot;TAGA&quot;
+## &quot;*TAM&quot;
+## &quot;*TEL&quot;
+## &quot;THAI&quot;
+## &quot;**TO&quot;
+## &quot;*TOI&quot;
+## &quot;*TOY&quot;
+## &quot;TURK&quot;
+## &quot;*URD&quot;
+## &quot;URDU&quot;
+## &quot;VIET&quot;
+## &quot;*YID&quot;
+## &quot;*YOR&quot;</code></pre>
+<p>RELIGION:</p>
+<pre class="bash"><code>     awk -F, '{ print $12 }' /home/203bdata/mimic-iii/ADMISSIONS.csv | tail -n +2 | sort | uniq</code></pre>
+<pre><code>## 
+## &quot;7TH DAY ADVENTIST&quot;
+## &quot;BAPTIST&quot;
+## &quot;BUDDHIST&quot;
+## &quot;CATHOLIC&quot;
+## &quot;CHRISTIAN SCIENTIST&quot;
+## &quot;EPISCOPALIAN&quot;
+## &quot;GREEK ORTHODOX&quot;
+## &quot;HEBREW&quot;
+## &quot;HINDU&quot;
+## &quot;JEHOVAH'S WITNESS&quot;
+## &quot;JEWISH&quot;
+## &quot;LUTHERAN&quot;
+## &quot;METHODIST&quot;
+## &quot;MUSLIM&quot;
+## &quot;NOT SPECIFIED&quot;
+## &quot;OTHER&quot;
+## &quot;PROTESTANT QUAKER&quot;
+## &quot;ROMANIAN EAST. ORTH&quot;
+## &quot;UNITARIAN-UNIVERSALIST&quot;
+## &quot;UNOBTAINABLE&quot;</code></pre>
+<p>MARITAL_STATUS:</p>
+<pre class="bash"><code>     awk -F, '{ print $13 }' /home/203bdata/mimic-iii/ADMISSIONS.csv | tail -n +2 | sort | uniq</code></pre>
+<pre><code>## 
+## &quot;DIVORCED&quot;
+## &quot;LIFE PARTNER&quot;
+## &quot;MARRIED&quot;
+## &quot;SEPARATED&quot;
+## &quot;SINGLE&quot;
+## &quot;UNKNOWN (DEFAULT)&quot;
+## &quot;WIDOWED&quot;</code></pre>
+<p>ETHNICITY:</p>
+<pre class="bash"><code>     awk -F, '{ print $14 }' /home/203bdata/mimic-iii/ADMISSIONS.csv | tail -n +2 | sort | uniq</code></pre>
+<pre><code>## &quot;AMERICAN INDIAN/ALASKA NATIVE&quot;
+## &quot;AMERICAN INDIAN/ALASKA NATIVE FEDERALLY RECOGNIZED TRIBE&quot;
+## &quot;ASIAN&quot;
+## &quot;ASIAN - ASIAN INDIAN&quot;
+## &quot;ASIAN - CAMBODIAN&quot;
+## &quot;ASIAN - CHINESE&quot;
+## &quot;ASIAN - FILIPINO&quot;
+## &quot;ASIAN - JAPANESE&quot;
+## &quot;ASIAN - KOREAN&quot;
+## &quot;ASIAN - OTHER&quot;
+## &quot;ASIAN - THAI&quot;
+## &quot;ASIAN - VIETNAMESE&quot;
+## &quot;BLACK/AFRICAN&quot;
+## &quot;BLACK/AFRICAN AMERICAN&quot;
+## &quot;BLACK/CAPE VERDEAN&quot;
+## &quot;BLACK/HAITIAN&quot;
+## &quot;CARIBBEAN ISLAND&quot;
+## &quot;HISPANIC/LATINO - CENTRAL AMERICAN (OTHER)&quot;
+## &quot;HISPANIC/LATINO - COLOMBIAN&quot;
+## &quot;HISPANIC/LATINO - CUBAN&quot;
+## &quot;HISPANIC/LATINO - DOMINICAN&quot;
+## &quot;HISPANIC/LATINO - GUATEMALAN&quot;
+## &quot;HISPANIC/LATINO - HONDURAN&quot;
+## &quot;HISPANIC/LATINO - MEXICAN&quot;
+## &quot;HISPANIC/LATINO - PUERTO RICAN&quot;
+## &quot;HISPANIC/LATINO - SALVADORAN&quot;
+## &quot;HISPANIC OR LATINO&quot;
+## &quot;MIDDLE EASTERN&quot;
+## &quot;MULTI RACE ETHNICITY&quot;
+## &quot;NATIVE HAWAIIAN OR OTHER PACIFIC ISLANDER&quot;
+## &quot;OTHER&quot;
+## &quot;PATIENT DECLINED TO ANSWER&quot;
+## &quot;PORTUGUESE&quot;
+## &quot;SOUTH AMERICAN&quot;
+## &quot;UNABLE TO OBTAIN&quot;
+## &quot;UNKNOWN/NOT SPECIFIED&quot;
+## &quot;WHITE&quot;
+## &quot;WHITE - BRAZILIAN&quot;
+## &quot;WHITE - EASTERN EUROPEAN&quot;
+## &quot;WHITE - OTHER EUROPEAN&quot;
+## &quot;WHITE - RUSSIAN&quot;</code></pre>
+<p>The number of Hispanic patients are calculated the number of <code>HISPANIC</code> in the colume of <code>ETHNICITY</code></p>
+<pre class="bash"><code>    awk -F, '{ print $14 }' /home/203bdata/mimic-iii/ADMISSIONS.csv | tail -n +2 | sort | grep -o HISPANIC | wc -l</code></pre>
+<pre><code>## 2128</code></pre>
+</div>
+<div id="q3" class="section level2">
+<h2>Q3</h2>
+<ol style="list-style-type: decimal">
+<li>First, get the txt:</li>
+</ol>
+<pre class="bash"><code>    curl http://www.gutenberg.org/cache/epub/42671/pg42671.txt &gt; pride_and_prejudice.txt</code></pre>
+<p>The tabulate of times of main characters mentioned is listed as below:</p>
+<pre class="bash"><code>    printf 'Name       ''Times Metioned\n'
+    for name in 'Elizabeth' 'Darcy' 'Jane' 'Lydia'
+      do count=$(grep -o $name pride_and_prejudice.txt | wc -l)
+      printf '%-15s%-10s\n' $name $count
+      done</code></pre>
+<pre><code>## Name       Times Metioned
+## grep: pride_and_prejudice.txt: No such file or directory
+## Elizabeth      0         
+## grep: pride_and_prejudice.txt: No such file or directory
+## Darcy          0         
+## grep: pride_and_prejudice.txt: No such file or directory
+## Jane           0         
+## grep: pride_and_prejudice.txt: No such file or directory
+## Lydia          0</code></pre>
+<ol start="2" style="list-style-type: decimal">
+<li>The output of two commands are text files with the same content:</li>
+</ol>
+<pre class="bash"><code>    echo 'hello, world' &gt; test1.txt</code></pre>
+<p>The first command means that everything that’s in “test1.txt” will be deleted, and “hello world” will be written to it (which means that “hello world” will be right at the beginning of “test1.txt”.</p>
+<pre class="bash"><code>    echo 'hello, world' &gt;&gt; test2.txt</code></pre>
+<p>The second command means that “hello, world” will be appended to “test2.txt”, so nothing will be deleted from “test2.txt”, and “hello, world will be at the end of”test2.txt&quot;.</p>
+<ol start="3" style="list-style-type: decimal">
+<li>Start the editor <code>vi</code> and save the file as <code>middle.sh</code>. Then use <code>chmod 755 middle.sh</code>.</li>
+</ol>
+<p>Excute the file to output middle lines.</p>
+<pre class="bash"><code>    cd ~
+    ./middle.sh pride_and_prejudice.txt 20 5</code></pre>
+<pre><code>## 
+## Author: Jane Austen
+## 
+## Editor: R. W. (Robert William) Chapman
+## </code></pre>
+<p>Command line arguments are accessed using numeric indexes inside a shell script preceded with a dollar($) sign. That is, first argument can be referred as $1, second as $2 and third as $3.</p>
+<p>In this case, meanings that the variables stand for are listed as below: <code>$1</code> stands for row number of end of lines presented. <code>$2</code> stands for name of the file in which presented lines are<code>./pride_and_prejudice.txt</code> <code>$3</code> stands for number of middle lines presented.</p>
+<p>The first line <code>#!/bin/sh</code> selects the <code>sh</code> shell. Problems arise when not using <code>#!/bin/sh</code> because the script-maker assumes the link is to bash as the default, but they function differently.</p>
 </div>
 <div id="q4" class="section level2">
 <h2>Q4</h2>
 <ol style="list-style-type: decimal">
 <li>This is my <code>runSim.R</code>code:</li>
 </ol>
-<pre class="bash"><code>cat runSim.R</code></pre>
-<pre><code>## ## parsing command arguments
-## for (arg in commandArgs(TRUE)) {
+<pre class="bash"><code>    cat runSim.R</code></pre>
+<pre><code>## ## The code is used for automatic simulation based on given seed and number of replicates
+## ## Arguments: nVals (sample size), disTypes (distribution)
+## ##            seed (random seed by input) and rep (number of replicates by input)
+## ## Output: report the average mean squared error (MSE)
+## ##         of primed-indexed average estimator  and the classical sample average estimator
+## 
+## ## parsing command arguments
+## for (arg in commandArgs(TRUE)){
 ##   eval(parse(text=arg))
 ## }
 ## 
 ## ## check if a given integer is prime
-## isPrime = function(n) {
-##   if (n &lt;= 3) {
+## isPrime = function(n){
+##   if (n&lt;=3){
 ##     return (TRUE)
 ##   }
-##   if (any((n %% 2:floor(sqrt(n))) == 0)) {
+##   if (any((n %% 2: floor(sqrt(n)))==0)){
 ##     return (FALSE)
 ##   }
 ##   return (TRUE)
 ## }
 ## 
-## ## estimate mean only using observation with prime indices
-## estMeanPrimes = function (x) {
+## ## estimate mean only using observation with prime indicies
+## estMeanPrimes = function(x){
 ##   n = length(x)
-##   ind = sapply(1:n, isPrime)
+##   ind = sapply(1:n,isPrime)
 ##   return (mean(x[ind]))
 ## }
 ## 
-## # set seed for random number generation
-## set.seed(seed)
+## ## generate seed
+## set.seed (seed)
+## 
+## ## calculate MSE
+## mseSampAvg = 0
+## msePrimeAvg = 0
+## 
 ## for (r in 1:rep){
-##   # parse the distribution simulation
-##   if (dist ==&quot;gaussian&quot;){
-##     # simulate data
+##   # simulate data
+##   if (dist == &quot;gaussian&quot;){
 ##     x = rnorm(n)
-##   } 
-##   else if (dist ==&quot;t1&quot;){
-##     x = rt(n, df = 1)
-##   } 
-##   else if (dist ==&quot;t5&quot;){
-##     x = rt(n, df = 5)
-##   } 
-##   else {
-##     stop(&quot;unrecognized distribution&quot;)
+##   } else if (dist == &quot;t1&quot;){
+##     x = rt(n,df=1)
+##   } else if (dist ==&quot;t5&quot;){
+##     x = rt(n,df=5)
+##   } else{
+##     stop(&quot;unrecohnized distribution&quot;)
 ##   }
-##   # try two methods
+##   # two methods
 ##   mseSampAvg = mseSampAvg + mean(x)^2
-##   msePrimeAvg = msesePrimeAvg + estMeanPrimes(x)^2
+##   msePrimeAvg = msePrimeAvg + estMeanPrimes(x)^2
 ## }
 ## 
-## print(mseSampAvg / rep)
-## print(msePrimeAvg / rep)</code></pre>
+## cat(mseSampAvg/rep,&quot;\t&quot;,msePrimeAvg/rep)</code></pre>
+<ol start="2" style="list-style-type: decimal">
+<li>First, quote the runSim.R in bash shell.</li>
+</ol>
+<pre class="bash"><code>    Rscript runSim.R n=100 dist=\&quot;gaussian\&quot; seed=203 rep=50</code></pre>
+<pre><code>## 0.01146443    0.03926458</code></pre>
 <!--
 run in teaching server terminal to submit:
-  git checkout master
+  git check out master
   git merge develop
   git tag hw1
   git tag
   git push --tags  
 -->
+<ol start="3" style="list-style-type: decimal">
+<li>Call autoSim.R and generate simulation data.</li>
+</ol>
+<pre class="bash"><code>    Rscript autoSim.R</code></pre>
+<pre><code>## [1] &quot;sysCall=nohup Rscript runSim.R n=100 dist=\&quot;'gaussian'\&quot; seed=203 rep=50 &gt; n_100_dist_gaussian.txt&quot;
+## [1] &quot;sysCall=nohup Rscript runSim.R n=200 dist=\&quot;'gaussian'\&quot; seed=203 rep=50 &gt; n_200_dist_gaussian.txt&quot;
+## [1] &quot;sysCall=nohup Rscript runSim.R n=300 dist=\&quot;'gaussian'\&quot; seed=203 rep=50 &gt; n_300_dist_gaussian.txt&quot;
+## [1] &quot;sysCall=nohup Rscript runSim.R n=400 dist=\&quot;'gaussian'\&quot; seed=203 rep=50 &gt; n_400_dist_gaussian.txt&quot;
+## [1] &quot;sysCall=nohup Rscript runSim.R n=500 dist=\&quot;'gaussian'\&quot; seed=203 rep=50 &gt; n_500_dist_gaussian.txt&quot;
+## [1] &quot;sysCall=nohup Rscript runSim.R n=600 dist=\&quot;'gaussian'\&quot; seed=203 rep=50 &gt; n_600_dist_gaussian.txt&quot;
+## [1] &quot;sysCall=nohup Rscript runSim.R n=700 dist=\&quot;'gaussian'\&quot; seed=203 rep=50 &gt; n_700_dist_gaussian.txt&quot;
+## [1] &quot;sysCall=nohup Rscript runSim.R n=800 dist=\&quot;'gaussian'\&quot; seed=203 rep=50 &gt; n_800_dist_gaussian.txt&quot;
+## [1] &quot;sysCall=nohup Rscript runSim.R n=900 dist=\&quot;'gaussian'\&quot; seed=203 rep=50 &gt; n_900_dist_gaussian.txt&quot;
+## [1] &quot;sysCall=nohup Rscript runSim.R n=1000 dist=\&quot;'gaussian'\&quot; seed=203 rep=50 &gt; n_1000_dist_gaussian.txt&quot;
+## [1] &quot;sysCall=nohup Rscript runSim.R n=100 dist=\&quot;'t1'\&quot; seed=203 rep=50 &gt; n_100_dist_t1.txt&quot;
+## [1] &quot;sysCall=nohup Rscript runSim.R n=200 dist=\&quot;'t1'\&quot; seed=203 rep=50 &gt; n_200_dist_t1.txt&quot;
+## [1] &quot;sysCall=nohup Rscript runSim.R n=300 dist=\&quot;'t1'\&quot; seed=203 rep=50 &gt; n_300_dist_t1.txt&quot;
+## [1] &quot;sysCall=nohup Rscript runSim.R n=400 dist=\&quot;'t1'\&quot; seed=203 rep=50 &gt; n_400_dist_t1.txt&quot;
+## [1] &quot;sysCall=nohup Rscript runSim.R n=500 dist=\&quot;'t1'\&quot; seed=203 rep=50 &gt; n_500_dist_t1.txt&quot;
+## [1] &quot;sysCall=nohup Rscript runSim.R n=600 dist=\&quot;'t1'\&quot; seed=203 rep=50 &gt; n_600_dist_t1.txt&quot;
+## [1] &quot;sysCall=nohup Rscript runSim.R n=700 dist=\&quot;'t1'\&quot; seed=203 rep=50 &gt; n_700_dist_t1.txt&quot;
+## [1] &quot;sysCall=nohup Rscript runSim.R n=800 dist=\&quot;'t1'\&quot; seed=203 rep=50 &gt; n_800_dist_t1.txt&quot;
+## [1] &quot;sysCall=nohup Rscript runSim.R n=900 dist=\&quot;'t1'\&quot; seed=203 rep=50 &gt; n_900_dist_t1.txt&quot;
+## [1] &quot;sysCall=nohup Rscript runSim.R n=1000 dist=\&quot;'t1'\&quot; seed=203 rep=50 &gt; n_1000_dist_t1.txt&quot;
+## [1] &quot;sysCall=nohup Rscript runSim.R n=100 dist=\&quot;'t5'\&quot; seed=203 rep=50 &gt; n_100_dist_t5.txt&quot;
+## [1] &quot;sysCall=nohup Rscript runSim.R n=200 dist=\&quot;'t5'\&quot; seed=203 rep=50 &gt; n_200_dist_t5.txt&quot;
+## [1] &quot;sysCall=nohup Rscript runSim.R n=300 dist=\&quot;'t5'\&quot; seed=203 rep=50 &gt; n_300_dist_t5.txt&quot;
+## [1] &quot;sysCall=nohup Rscript runSim.R n=400 dist=\&quot;'t5'\&quot; seed=203 rep=50 &gt; n_400_dist_t5.txt&quot;
+## [1] &quot;sysCall=nohup Rscript runSim.R n=500 dist=\&quot;'t5'\&quot; seed=203 rep=50 &gt; n_500_dist_t5.txt&quot;
+## [1] &quot;sysCall=nohup Rscript runSim.R n=600 dist=\&quot;'t5'\&quot; seed=203 rep=50 &gt; n_600_dist_t5.txt&quot;
+## [1] &quot;sysCall=nohup Rscript runSim.R n=700 dist=\&quot;'t5'\&quot; seed=203 rep=50 &gt; n_700_dist_t5.txt&quot;
+## [1] &quot;sysCall=nohup Rscript runSim.R n=800 dist=\&quot;'t5'\&quot; seed=203 rep=50 &gt; n_800_dist_t5.txt&quot;
+## [1] &quot;sysCall=nohup Rscript runSim.R n=900 dist=\&quot;'t5'\&quot; seed=203 rep=50 &gt; n_900_dist_t5.txt&quot;
+## [1] &quot;sysCall=nohup Rscript runSim.R n=1000 dist=\&quot;'t5'\&quot; seed=203 rep=50 &gt; n_1000_dist_t5.txt&quot;</code></pre>
+<p>Print the data to the table | <span class="math inline">\(n\)</span> | Method | Gaussian | <span class="math inline">\(t_5\)</span> | <span class="math inline">\(t_1\)</span> | |—–|———-|——-|——-|———-| for n (100, 1000, by=100)</p>
 </div>
 
 
