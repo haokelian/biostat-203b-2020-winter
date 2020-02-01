@@ -1,0 +1,126 @@
+---
+title: "Homework 2 Solution"
+author: "Haoke Lian (605266888)"
+date: "2020/1/28"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, cache = TRUE)
+#cache save time for knit
+```
+
+##Q1
+```{r}
+install.packages("tidyverse")
+install.packages("dplyr")
+install.packages("lubridate")
+install.packages("ggplot2")
+library("tidyverse")
+library("dplyr")
+library("lubridate")
+library("ggplot2")
+admission <- read_csv('/home/203bdata/mimic-iii/ADMISSIONS.csv',
+                      col_types = cols(SUBJECT_ID = col_integer(),
+                                       HOSPITAL_EXPIRE_FLAG = col_logical()))
+
+#calculate admission and time related data 
+admission_time <- 
+  select(admission, ADMITTIME:DISCHTIME, starts_with("ADMISSION"), 
+         HOSPITAL_EXPIRE_FLAG, SUBJECT_ID, INSURANCE:ETHNICITY)
+
+admission_time <- mutate(admission_time,
+  year = year(ADMITTIME),
+  month = month(ADMITTIME, label = TRUE),
+  weekday = wday(ADMITTIME, label = TRUE),
+  hour = hour(ADMITTIME),
+  days_of_hospital_stay = (unclass(as.POSIXct(DISCHTIME))- unclass(as.POSIXct(ADMITTIME)))/86400,
+) %>% print(width = Inf)
+
+#group and collapse rows for a same patient
+patients_uniq <- group_by(admission_time, SUBJECT_ID)
+patients_data <- select(patients_uniq, INSURANCE:ETHNICITY, 
+                        year:days_of_hospital_stay, 
+                        HOSPITAL_EXPIRE_FLAG, SUBJECT_ID)
+patients_data <- mutate(patients_data, number_of_admissions = n(), 
+                        death = sum(HOSPITAL_EXPIRE_FLAG))
+patients_data <- distinct(patients_data, SUBJECT_ID, .keep_all = TRUE)
+
+#select top 10 ethnicity
+ethnicity_top <- patients_data %>% group_by(ETHNICITY) %>%
+  count(ETHNICITY, sort = TRUE) %>% head(10)
+
+#death rate
+death_data <- filter(patients_data, death == TRUE)
+
+#graphs
+admission_time %>%
+  ggplot(aes(x = ADMITTIME)) +
+  geom_freqpoly(binwidth = 31536000) + #seconds in a year
+  labs(x = "admission year",
+    y = "number of admissions")
+
+ggplot(data = admission_time) + 
+  geom_bar(mapping = aes(x = month)) +
+labs(y = "number of admissions")
+
+ggplot(data = admission_time) + 
+  geom_bar(mapping = aes(x = weekday)) +
+labs(y = "number of admissions")
+
+ggplot(data = admission_time) + 
+  geom_bar(mapping = aes(x = hour)) +
+labs(y = "number of admissions")
+
+admission_time %>%
+  ggplot(aes(x = days_of_hospital_stay)) + 
+  geom_histogram(bins = 100) +
+  labs(y = "number of admissions")
+
+ggplot(data = admission_time) + 
+  geom_bar(mapping = aes(x = ADMISSION_TYPE)) +
+labs(x = "admission types",
+     y = "number of admissions")
+
+ggplot(data = admission_time) + 
+  geom_bar(mapping = aes(x = ADMISSION_LOCATION)) +
+  labs(x = "admission locations",
+     y = "number of admissions") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 0.5, vjust = 0.5))
+
+ggplot(data = patients_data) + 
+  geom_bar(mapping = aes(x = number_of_admissions)) +
+  labs(x = "number of admissions per patient",
+     y = "number of patients")
+
+ggplot(data = patients_data) + 
+  geom_bar(mapping = aes(x = INSURANCE)) +
+  labs(y = "number of patients")
+
+ggplot(data = patients_data) + 
+  geom_bar(mapping = aes(x = RELIGION)) +
+  labs(y = "number of patients") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 0.5, vjust = 0.5))
+
+ggplot(data = patients_data) + 
+  geom_bar(mapping = aes(x = MARITAL_STATUS)) +
+  labs(y = "number of patients") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 0.5, vjust = 0.5))
+
+ggplot(data = ethnicity_top) + 
+  geom_col(mapping = aes(x = ETHNICITY, y = n)) +
+  labs(x = "top 10 ethnicity",
+       y = "number of patients") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 0.5, vjust = 0.5))
+
+ggplot(data = death_data) + 
+  geom_bar(mapping = aes(x = number_of_admissions)) +
+  labs(y = "number of death")
+
+death_data %>%
+  ggplot(aes(x = days_of_hospital_stay)) + 
+  geom_histogram(bins = 100) +
+  labs(y = "number of death")
+            
+```
+

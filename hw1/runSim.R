@@ -23,7 +23,7 @@ isPrime = function(n){
 ## estimate mean only using observation with prime indicies
 estMeanPrimes = function(x){
   n = length(x)
-  ind = sapply(1:n,isPrime)
+  ind = sapply(1:n, isPrime)
   return (mean(x[ind]))
 }
 
@@ -50,4 +50,4 @@ for (r in 1:rep){
   msePrimeAvg = msePrimeAvg + estMeanPrimes(x)^2
 }
 
-cat(msePrimeAvg/rep,"\t",mseSampAvg/rep,"\n")
+cat(msePrimeAvg/rep,"\t", mseSampAvg/rep,"\n")
