@@ -12,21 +12,21 @@ knitr::opts_chunk$set(echo = TRUE, cache = TRUE)
 
 ##Q1
 ```{r}
-install.packages("tidyverse")
-install.packages("dplyr")
-install.packages("lubridate")
-install.packages("ggplot2")
-library("tidyverse")
-library("dplyr")
-library("lubridate")
-library("ggplot2")
+# install.packages("tidyverse")
+# install.packages("dplyr")
+# install.packages("lubridate")
+# install.packages("ggplot2")
+# library("tidyverse")
+# library("dplyr")
+# library("lubridate")
+# library("ggplot2")
 admission <- read_csv('/home/203bdata/mimic-iii/ADMISSIONS.csv',
                       col_types = cols(SUBJECT_ID = col_integer(),
                                        HOSPITAL_EXPIRE_FLAG = col_logical()))
 
 #calculate admission and time related data 
 admission_time <- 
-  select(admission, ADMITTIME:DISCHTIME, starts_with("ADMISSION"), 
+  select(admission, ADMITTIME:DEATHTIME, starts_with("ADMISSION"), 
          HOSPITAL_EXPIRE_FLAG, SUBJECT_ID, INSURANCE:ETHNICITY)
 
 admission_time <- mutate(admission_time,
@@ -34,24 +34,25 @@ admission_time <- mutate(admission_time,
   month = month(ADMITTIME, label = TRUE),
   weekday = wday(ADMITTIME, label = TRUE),
   hour = hour(ADMITTIME),
-  days_of_hospital_stay = (unclass(as.POSIXct(DISCHTIME))- unclass(as.POSIXct(ADMITTIME)))/86400,
+  days_of_hospital_stay = (unclass(as.POSIXct(DISCHTIME))- unclass(as.POSIXct(ADMITTIME)))/86400, #86400s/day
 ) %>% print(width = Inf)
 
 #group and collapse rows for a same patient
+#obtain patients' data
 patients_uniq <- group_by(admission_time, SUBJECT_ID)
 patients_data <- select(patients_uniq, INSURANCE:ETHNICITY, 
-                        year:days_of_hospital_stay, 
+                        year:days_of_hospital_stay, DEATHTIME,
                         HOSPITAL_EXPIRE_FLAG, SUBJECT_ID)
 patients_data <- mutate(patients_data, number_of_admissions = n(), 
                         death = sum(HOSPITAL_EXPIRE_FLAG))
-patients_data <- distinct(patients_data, SUBJECT_ID, .keep_all = TRUE)
+(patients_data <- distinct(patients_data, SUBJECT_ID, .keep_all = TRUE))
 
 #select top 10 ethnicity
-ethnicity_top <- patients_data %>% group_by(ETHNICITY) %>%
-  count(ETHNICITY, sort = TRUE) %>% head(10)
+(ethnicity_top <- patients_data %>% group_by(ETHNICITY) %>%
+  count(ETHNICITY, sort = TRUE) %>% head(10))
 
-#death rate
-death_data <- filter(patients_data, death == TRUE)
+#distinct data of died patients
+(death_data <- filter(patients_data, death == TRUE))
 
 #graphs
 admission_time %>%
@@ -113,6 +114,16 @@ ggplot(data = ethnicity_top) +
        y = "number of patients") +
   theme(axis.text.x = element_text(angle = 90, hjust = 0.5, vjust = 0.5))
 
+ggplot(data = patients_data) + 
+  geom_bar(mapping = aes(x = year, fill = HOSPITAL_EXPIRE_FLAG)) +
+  theme(legend.position="bottom") +
+  scale_fill_discrete(name="death within hospital") +
+  labs(y = "number of patients")
+
+ggplot(data = patients_data) + 
+  geom_bar(mapping = aes(x = year(DEATHTIME))) +
+  labs(y = "number of patients")
+
 ggplot(data = death_data) + 
   geom_bar(mapping = aes(x = number_of_admissions)) +
   labs(y = "number of death")
@@ -122,5 +133,32 @@ death_data %>%
   geom_histogram(bins = 100) +
   labs(y = "number of death")
             
+```
+
+##Q2
+```{r}
+#combine two sets of data
+pati <- read_csv('/home/203bdata/mimic-iii/PATIENTS.csv')
+patients_linked <- left_join(patients_data, pati)
+
+#graphics of genders
+ggplot(data = patients_linked) + 
+  geom_bar(mapping = aes(x = year, fill = GENDER)) +
+  theme(legend.position="bottom") +
+  scale_fill_discrete(breaks=c("female","male")) +
+  labs(x= "year of admission", y = "number of patients")
+
+ggplot(data = patients_linked) + 
+  geom_bar(mapping = aes(x = year(DEATHTIME), fill = GENDER)) +
+  theme(legend.position="bottom") +
+  scale_fill_discrete(breaks=c("female","male")) +
+  labs(x= "year of death", y = "number of patients")
+
+ggplot(data = patients_linked) + 
+  geom_bar(mapping = aes(x = MARITAL_STATUS, fill = GENDER)) +
+  theme(legend.position="bottom") +
+  scale_fill_discrete(breaks=c("female","male")) +
+  labs(y = "number of patients")
+  theme(axis.text.x = element_text(angle = 45, hjust = 0.5, vjust = 0.5))
 ```
 
