@@ -16,10 +16,10 @@ knitr::opts_chunk$set(echo = TRUE, cache = TRUE)
 # install.packages("dplyr")
 # install.packages("lubridate")
 # install.packages("ggplot2")
-# library("tidyverse")
-# library("dplyr")
-# library("lubridate")
-# library("ggplot2")
+library("tidyverse")
+library("dplyr")
+library("lubridate")
+library("ggplot2")
 admission <- read_csv('/home/203bdata/mimic-iii/ADMISSIONS.csv',
                       col_types = cols(SUBJECT_ID = col_integer(),
                                        HOSPITAL_EXPIRE_FLAG = col_logical()))
@@ -42,7 +42,7 @@ admission_time <- mutate(admission_time,
 patients_uniq <- group_by(admission_time, SUBJECT_ID)
 patients_data <- select(patients_uniq, INSURANCE:ETHNICITY, 
                         year:days_of_hospital_stay, DEATHTIME,
-                        HOSPITAL_EXPIRE_FLAG, SUBJECT_ID)
+                        HOSPITAL_EXPIRE_FLAG, ADMITTIME, SUBJECT_ID)
 patients_data <- mutate(patients_data, number_of_admissions = n(), 
                         death = sum(HOSPITAL_EXPIRE_FLAG))
 (patients_data <- distinct(patients_data, SUBJECT_ID, .keep_all = TRUE))
@@ -138,20 +138,27 @@ death_data %>%
 ##Q2
 ```{r}
 #combine two sets of data
-pati <- read_csv('/home/203bdata/mimic-iii/PATIENTS.csv')
+pati <- read_csv('/home/203bdata/mimic-iii/PATIENTS.csv') 
 patients_linked <- left_join(patients_data, pati)
+admit_linked <- left_join(admission, pati, by = "SUBJECT_ID")
+admit_linked <- mutate(admit_linked, 
+                       age = as.numeric(as.duration(ADMITTIME - DOB) / 31536000))
 
 #graphics of genders
+ggplot(data = patients_linked, mapping = aes(x = factor(1), fill = GENDER)) + 
+  geom_bar(width = 1) + 
+  coord_polar("y")
+
 ggplot(data = patients_linked) + 
   geom_bar(mapping = aes(x = year, fill = GENDER)) +
-  theme(legend.position="bottom") +
-  scale_fill_discrete(breaks=c("female","male")) +
-  labs(x= "year of admission", y = "number of patients")
+  theme(legend.position = "bottom") +
+  scale_fill_discrete(breaks = c("female","male")) +
+  labs(x = "year of admission", y = "number of patients")
 
 ggplot(data = patients_linked) + 
   geom_bar(mapping = aes(x = year(DEATHTIME), fill = GENDER)) +
-  theme(legend.position="bottom") +
-  scale_fill_discrete(breaks=c("female","male")) +
+  theme(legend.position = "bottom") +
+  scale_fill_discrete(breaks = c("female","male")) +
   labs(x= "year of death", y = "number of patients")
 
 ggplot(data = patients_linked) + 
@@ -160,5 +167,93 @@ ggplot(data = patients_linked) +
   scale_fill_discrete(breaks=c("female","male")) +
   labs(y = "number of patients")
   theme(axis.text.x = element_text(angle = 45, hjust = 0.5, vjust = 0.5))
+ 
+#graphic of age distribution
+admit_linked %>%
+  ggplot(aes(x = age)) +
+  geom_freqpoly() + #seconds in a year
+  labs(x = "age of patients", y = "number of patients") +
+  labs(caption = paste("0: newborn\n>300: age older than 89 are hidden"))
+```
+
+##Q3
+```{r}
+icus <- read_csv('/home/203bdata/mimic-iii/ICUSTAYS.csv') 
+icustays <- left_join(icus, patients_linked, by = "SUBJECT_ID")
+icustays <- mutate(icustays, age_in_icu 
+                   = as.numeric(as.duration(INTIME - DOB) / 31536000)) 
+
+#graphs
+icustays %>%
+  ggplot(aes(x = LOS)) + 
+  geom_histogram(bins = 100) +
+  labs(x = "length of ICU stay", y = "number of patients") 
+
+ggplot(data = icustays) + 
+  geom_bar(mapping = aes(x = FIRST_CAREUNIT)) +
+  labs(x = "first ICU unit type", y = "number of stays") 
+
+ggplot(data = icustays) + 
+  geom_bar(mapping = aes(x = GENDER)) +
+  labs(y = "number of stays") 
+
+icustays %>%
+  ggplot(aes(x = LOS, fill = GENDER)) + 
+  geom_histogram(bins = 100) +
+  labs(x = "length of ICU stay", y = "number of stays") 
+
+icustays %>%
+  ggplot(aes(x = age_in_icu)) +
+  geom_freqpoly() + #seconds in a year
+  labs(x = "age in ICU", y = "number of stays") +
+  labs(caption = paste("0: newborn\n>300: age older than 89 are hidden"))
+
+```
+
+##Q4
+```{r}
+#Find potential values of ITEMID that correspond to systolic blood pressure
+ditem <- read_csv('/home/203bdata/mimic-iii/D_ITEMS.csv')
+SBP <- ditem %>% 
+  filter(str_detect(LABEL, "systolic"))
+(SBPID <- select(SBP, ITEMID))
+#combine 1) first ICU stay, 2) demographic information,
+#        3) the first SBP during ICU stay, 
+#        4) whether the patient died within 30 days of admission.
+
+#find first icustays
+icustays <- arrange(icustays, INTIME)
+icu_uniq <- distinct(icustays, SUBJECT_ID, .keep_all = TRUE)
+
+#find first SBP chartevent
+chartevent <- read_csv('/home/203bdata/mimic-iii/CHARTEVENTS.csv')
+chartevent <- select(chartevent, SUBJECT_ID, ITEMID, VALUE, CHARTTIME)
+chartevent <- dplyr :: filter(chartevent, 
+                          grepl('226850|226852|220050|220059|220179', ITEMID))
+chartevent <- arrange(chartevent, CHARTTIME)
+chartevent <- distinct(chartevent, SUBJECT_ID, .keep_all = TRUE)
+
+#combine 2 frames
+compile_data <- right_join(chartevent, icu_uniq, by = "SUBJECT_ID")
+
+#find if patients died within 30 days of admission
+#find how many days patients died after admission
+compile_data <- compile_data %>%
+  mutate(thirty_days_flag = as.numeric(
+  as.duration(DEATHTIME - ADMITTIME) / 86400))
+#ignore death after 30 days
+compile_data[ , 39][compile_data[, 39] > 30] <- NA
+compile_data$thirty_days_flag = as.logical(compile_data$thirty_days_flag)
+
+#select related variables
+(compile_data <- select(compile_data,
+                       SUBJECT_ID, INSURANCE:ETHNICITY, #demographic information
+                       ICUSTAY_ID, starts_with("FIRST"), INTIME, #first icu stay
+                       ITEMID:CHARTTIME, #first SBP
+                       thirty_days_flag #whether the patient died within 30 days
+                       ))
+
+#if only patients with SBP measurement are needed
+(compile_data <- filter(compile_data, !is.na(ITEMID)))
 ```
 
