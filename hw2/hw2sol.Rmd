@@ -1,0 +1,300 @@
+---
+title: "Homework 2 Solution"
+author: "Haoke Lian (605266888)"
+date: "2020/1/28"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, cache = TRUE)
+# cache save time for knit
+```
+
+## Q1
+```{r}
+## install and library packages
+install.packages("tidyverse")
+install.packages("dplyr")
+install.packages("lubridate")
+install.packages("ggplot2")
+library("tidyverse")
+library("dplyr")
+library("lubridate")
+library("ggplot2")
+
+# calculate admission and time related data 
+admission <- read_csv('/home/203bdata/mimic-iii/ADMISSIONS.csv',
+                      col_types = cols(SUBJECT_ID = col_integer(),
+                                       HOSPITAL_EXPIRE_FLAG = col_logical()))
+admission_time <- 
+  select(admission, ADMITTIME:DEATHTIME, starts_with("ADMISSION"), 
+         HOSPITAL_EXPIRE_FLAG, SUBJECT_ID, INSURANCE:ETHNICITY)
+admission_time <- mutate(admission_time,
+  year = year(ADMITTIME),
+  month = month(ADMITTIME, label = TRUE),
+  weekday = wday(ADMITTIME, label = TRUE),
+  hour = hour(ADMITTIME),
+  days_of_hospital_stay = (unclass(as.POSIXct(DISCHTIME))
+                        - unclass(as.POSIXct(ADMITTIME))) / 86400 #86400s/day
+) %>% print(width = Inf)
+
+# group and collapse rows for a same patient
+# obtain patients' data
+patients_uniq <- group_by(admission_time, SUBJECT_ID)
+patients_data <- select(patients_uniq, INSURANCE:ETHNICITY, 
+                        year:days_of_hospital_stay, DEATHTIME,
+                        HOSPITAL_EXPIRE_FLAG, ADMITTIME, SUBJECT_ID)
+
+# calculate number of admissions and check died or not in the end
+patients_data <- mutate(patients_data, number_of_admissions = n(), 
+                        death = sum(HOSPITAL_EXPIRE_FLAG))
+(patients_data <- distinct(patients_data, SUBJECT_ID, .keep_all = TRUE))
+
+# obtain data of died patients
+(death_data <- filter(patients_data, death == TRUE))
+
+# graphs based on admissions are ploted based on admissions' information
+# admission numbers vs. time
+admission_time %>%
+  ggplot(aes(x = ADMITTIME)) +
+  geom_freqpoly(binwidth = 31536000) + #seconds in a year
+  labs(x = "admission year",
+    y = "number of admissions")
+
+ggplot(data = admission_time) + 
+  geom_bar(mapping = aes(x = month)) +
+labs(y = "number of admissions")
+
+ggplot(data = admission_time) + 
+  geom_bar(mapping = aes(x = weekday)) +
+labs(y = "number of admissions")
+
+ggplot(data = admission_time) + 
+  geom_bar(mapping = aes(x = hour)) +
+labs(y = "number of admissions")
+
+# admission numbers vs. length of hosiptal stay
+admission_time %>%
+  ggplot(aes(x = days_of_hospital_stay)) + 
+  geom_histogram(bins = 100) +
+  labs(y = "number of admissions")
+
+# admission numbers vs. admission type
+ggplot(data = admission_time) + 
+  geom_bar(mapping = aes(x = ADMISSION_TYPE)) +
+labs(x = "admission types",
+     y = "number of admissions")
+
+# admission numbers vs. admission location
+ggplot(data = admission_time) + 
+  geom_bar(mapping = aes(x = ADMISSION_LOCATION)) +
+  labs(x = "admission locations",
+     y = "number of admissions") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 0.5, vjust = 0.5))
+
+# graphs based on patients are ploted based on unique patients' information
+# patient numbers vs. admissions per patient
+ggplot(data = patients_data) + 
+  geom_bar(mapping = aes(x = number_of_admissions)) +
+  labs(x = "number of admissions per patient",
+     y = "number of patients")
+
+# patient numbers vs. patients' demographic information
+ggplot(data = patients_data) + 
+  geom_bar(mapping = aes(x = INSURANCE)) +
+  labs(y = "number of patients")
+
+ggplot(data = patients_data) + 
+  geom_bar(mapping = aes(x = RELIGION)) +
+  labs(y = "number of patients") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 0.5, vjust = 0.5))
+
+ggplot(data = patients_data) + 
+  geom_bar(mapping = aes(x = MARITAL_STATUS)) +
+  labs(y = "number of patients") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 0.5, vjust = 0.5))
+
+# too many language types of patients
+# select top 10 languages
+(language_top <- patients_data %>% group_by(LANGUAGE) %>%
+  count(LANGUAGE, sort = TRUE) %>% head(10))
+ggplot(data = language_top) + 
+  geom_col(mapping = aes(x = LANGUAGE, y = n)) +
+  labs(x = "top 10 languages",
+       y = "number of patients")
+
+# too many ethnicity types of patients
+# select top 10 ethnicities
+(ethnicity_top <- patients_data %>% group_by(ETHNICITY) %>%
+  count(ETHNICITY, sort = TRUE) %>% head(10))
+ggplot(data = ethnicity_top) + 
+  geom_col(mapping = aes(x = ETHNICITY, y = n)) +
+  labs(x = "top 10 ethnicities",
+       y = "number of patients") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 0.5, vjust = 0.5))
+
+# death rate vs. year of admission
+ggplot(data = patients_data) + 
+  geom_bar(mapping = aes(x = year, fill = HOSPITAL_EXPIRE_FLAG)) +
+  theme(legend.position="bottom") +
+  scale_fill_discrete(name="death within hospital") +
+  labs(y = "number of patients")
+
+# graphs of death and related information
+# patients number vs. deathtime 
+ggplot(data = patients_data) + 
+  geom_bar(mapping = aes(x = year(DEATHTIME))) +
+  labs(y = "number of patients")
+
+# death number vs. number of admission per patient
+ggplot(data = death_data) + 
+  geom_bar(mapping = aes(x = number_of_admissions)) +
+  labs(y = "number of death")
+
+# death number vs. days of hospital stay
+death_data %>%
+  ggplot(aes(x = days_of_hospital_stay)) + 
+  geom_histogram(bins = 100) +
+  labs(y = "number of death")
+            
+```
+
+## Q2
+```{r}
+# combine data
+pati <- read_csv('/home/203bdata/mimic-iii/PATIENTS.csv') 
+patients_linked <- left_join(patients_data, pati)
+admit_linked <- left_join(admission, pati, by = "SUBJECT_ID")
+
+# calculate the age of patients  / 31536000
+admit_linked <- mutate(admit_linked, 
+                      age = as.numeric(as.duration(ADMITTIME - DOB) / 31536000))
+
+# graphics of genders distribution among patients and death
+ggplot(data = patients_linked, mapping = aes(x = factor(1), fill = GENDER)) + 
+  geom_bar(width = 1) + 
+  coord_polar("y")
+
+ggplot(data = patients_linked) + 
+  geom_bar(mapping = aes(x = year, fill = GENDER)) +
+  labs(x = "year of admission", y = "number of patients")
+
+ggplot(data = patients_linked) + 
+  geom_bar(mapping = aes(x = year(DEATHTIME), fill = GENDER)) +
+  labs(x= "year of death", y = "number of patients")
+
+ggplot(data = patients_linked) + 
+  geom_bar(mapping = aes(x = MARITAL_STATUS, fill = GENDER)) +
+  labs(y = "number of patients") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 0.5, vjust = 0.5))
+ 
+# distribution of patients' age at admission among all admissions
+# 2 graphs are based on admissions instead of unique patients
+# the purpose is to show the pattern of admissions
+admit_linked %>%
+  ggplot(aes(x = age)) +
+  geom_freqpoly(bins = 300) + 
+  labs(x = "age of patients", y = "number of patients") +
+  labs(caption = paste("0: newborn\n>300: age older than 89 are hidden"))
+
+# ignore age = 0 / age = 300 for a more comprehensive distribution of age
+admit_linked %>% filter(age > 1) %>% filter(age <300) %>%
+  ggplot(aes(x = age)) +
+  geom_freqpoly(bins = 100) + 
+  labs(x = "age of patients", y = "number of patients")
+```
+
+## Q3
+```{r}
+# combine data and calculate age in ICU
+icus <- read_csv('/home/203bdata/mimic-iii/ICUSTAYS.csv') 
+icustays <- left_join(icus, patients_linked, by = "SUBJECT_ID")
+icustays <- mutate(icustays, age_in_icu 
+                   = as.numeric(as.duration(INTIME - DOB) / 31536000)) 
+
+# all graphs are based on ICU stays instead of unique patients
+# the purpose is to show the pattern of ICU stays
+# graphs of ICU stays and information of ICU stays
+icustays %>%
+  ggplot(aes(x = LOS)) + 
+  geom_histogram(bins = 100) +
+  labs(x = "length of ICU stay", y = "number of ICU stays") 
+
+ggplot(data = icustays) + 
+  geom_bar(mapping = aes(x = FIRST_CAREUNIT)) +
+  labs(x = "first ICU unit type", y = "number of ICU stays") 
+
+# distribution of gender among all ICU stays
+ggplot(data = icustays, mapping = aes(x = factor(1), fill = GENDER)) + 
+  geom_bar(width = 1) + 
+  coord_polar("y")
+
+# distribution of gender among ICU stays and length of ICU stays 
+icustays %>%
+  ggplot(aes(x = LOS, fill = GENDER)) + 
+  geom_histogram(bins = 100) +
+  labs(x = "length of ICU stay", y = "number of ICU stays") 
+
+# distribution of patients' age in ICU among all ICU stays
+icustays %>%
+  ggplot(aes(x = age_in_icu)) +
+  geom_freqpoly(bins = 300) + #seconds in a year
+  labs(x = "age in ICU", y = "number of patients") +
+  labs(caption = paste("0: newborn\n>300: age older than 89 are hidden"))
+
+# ignore age = 0 / age = 300 for a more comprehensive distribution of age
+icustays %>% filter(age_in_icu > 1) %>% filter(age_in_icu <300) %>%
+  ggplot(aes(x = age_in_icu)) +
+  geom_freqpoly(bins = 100) + 
+  labs(x = "age of patients", y = "number of patients")
+```
+
+## Q4
+```{r}
+# Find potential values of ITEMID that correspond to systolic blood pressure
+ditem <- read_csv('/home/203bdata/mimic-iii/D_ITEMS.csv')
+SBP <- ditem %>% 
+  filter(str_detect(LABEL, "systolic"))
+(SBPID <- select(SBP, ITEMID))
+
+# combine 1) first ICU stay, 2) demographic information,
+#         3) the first SBP during ICU stay, 
+#         4) whether the patient died within 30 days of admission.
+
+# find first icustays
+icustays <- arrange(icustays, INTIME)
+icu_uniq <- distinct(icustays, SUBJECT_ID, .keep_all = TRUE)
+
+# find first SBP chartevent
+chartevent <- read_csv('/home/203bdata/mimic-iii/CHARTEVENTS.csv')
+chartevent <- select(chartevent, SUBJECT_ID, ITEMID, VALUE, CHARTTIME)
+chartevent <- dplyr :: filter(chartevent, 
+                          grepl('226850|226852|220050|220059|220179', ITEMID))
+chartevent <- arrange(chartevent, CHARTTIME)
+chartevent <- distinct(chartevent, SUBJECT_ID, .keep_all = TRUE)
+
+# combine 2 frames
+compile_data <- right_join(chartevent, icu_uniq, by = "SUBJECT_ID")
+
+# find if patients died within 30 days of admission
+# find how many days patients died after admission
+compile_data <- compile_data %>%
+  mutate(thirty_days_flag = as.numeric(
+  as.duration(DEATHTIME - ADMITTIME) / 86400))
+# ignore death after 30 days
+compile_data[, 39][compile_data[, 39] > 30] <- NA
+compile_data[, 39][is.na(compile_data[, 39])] = 0
+compile_data$thirty_days_flag = as.logical(compile_data$thirty_days_flag)
+
+# select related variables
+compile_data <- select(compile_data,
+                       SUBJECT_ID, INSURANCE:ETHNICITY, #demographic information
+                       ICUSTAY_ID, starts_with("FIRST"), INTIME, #first icu stay
+                       ITEMID:CHARTTIME, #first SBP
+                       thirty_days_flag #whether the patient died within 30 days
+                       ) %>% print(width = Inf)
+
+# if only patients with SBP measurement are needed
+compile_data <- filter(compile_data, !is.na(ITEMID)) %>% print(width = Inf)
+```
+
