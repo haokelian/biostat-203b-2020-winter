@@ -51,8 +51,9 @@ for (r in 1:(fileNum*2)){
 M <- rep(c('PrimeAvg','SampAvg'),rowNum)
 
 # stitch the table and present
-table <- data.frame(n=N_, Method=M, Gaussian=datalist_1, t1=datalist_2, t5=datalist_3)
-kable(table)
+table <- data.frame(n = N_, Method = M, Gaussian = datalist_1, t1 = datalist_2,
+                    t5 = datalist_3)
+# kable(table)
 
 
 
