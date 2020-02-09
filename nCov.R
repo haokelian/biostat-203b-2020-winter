@@ -1,10 +1,10 @@
 # remotes::install_github("GuangchuangYu/nCov2019")
-# librarry(nCov2019)
+library(nCov2019)
 x <- get_nCov2019()
 lapply(x, head)
 #total patients
 summary(x)
-#today total
+#today added
 summary(x, by = 'today')
 #graphs
 ggplot(summary(x), aes(as.Date(date,"%m.%d"), as.numeric(confirm))) +
