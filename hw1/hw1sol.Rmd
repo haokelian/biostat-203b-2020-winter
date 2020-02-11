@@ -115,7 +115,6 @@ Start the editor `vi` and save the file as `middle.sh`. Then use `chmod 755 midd
 
 Excute the file to output middle lines.
 ```{bash}
-    cd ~
     ./middle.sh pride_and_prejudice.txt 20 5
 ```
 
