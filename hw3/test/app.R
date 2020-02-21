@@ -1,52 +1,68 @@
-#
-# This is a Shiny web application. You can run the application by clicking
-# the 'Run App' button above.
-#
-# Find out more about building applications with Shiny here:
-#
-#    http://shiny.rstudio.com/
-#
-
+# install.packages("shinythemes")
 library(shiny)
+library(shinythemes)
 
-
-    ui = navbarPage(
-        title="导航条风格",
-        tabPanel("One", icon=icon("home")),
-        tabPanel("Two"),
+ui = tagList(
+    shinythemes::themeSelector(),
+    navbarPage(
+        theme = "darkly", "Cronavirus Telescope",
+        tabPanel("Worldwide Summary", icon=icon("home"),
+                 
+                 sidebarPanel(
+                     textInput("txt", "Text input:", "general"),
+                     sliderInput("slider", "Slider input:", 1, 100, 30),
+                     tags$h5("Deafult actionButton:"),
+                     actionButton("action", "Search"),
+                     
+                     tags$h5("actionButton with CSS class:"),
+                     actionButton("action2", "Action button", class = "btn-primary")
+                 ),
+                 mainPanel(
+                     tabsetPanel(
+                         tabPanel("Tab 1",
+                                  h4("Table"),
+                                  tableOutput("table"),
+                                  h4("Verbatim text output"),
+                                  verbatimTextOutput("txtout"),
+                                  h1("Header 1"),
+                                  h2("Header 2"),
+                                  h3("Header 3"),
+                                  h4("Header 4"),
+                                  h5("Header 5")
+                         ),
+                         tabPanel("Tab 2", "This panel is intentionally left blank"),
+                         tabPanel("Tab 3", "This panel is intentionally left blank")
+                     )
+                 ),
+                 h4("Trend"),
+                 tabsetPanel(
+                     tabPanel("Confirmed and Suspected Cases", icon=icon("home")),
+                     tabPanel("Added Cases"),
+                     tabPanel("Death Rate"),
+                     id = NULL, selected = NULL, type = c("tabs", "pills"),
+                     position = NULL),
+        ),
         navbarMenu(
-            title = "Three",
-            tabPanel("Four"),
-            tabPanel("Five")
+            title = "China",
+            tabPanel("Total"),
+            tabPanel("Provinces")
         ),
-        navlistPanel(
-            # title = "导航面板风格",
-            widths = c(3, 9),
-            tabPanel("One", icon=icon("home")),
-            tabPanel("Two"),
-            navbarMenu(
-                title = "Three",
-                tabPanel("Four"),
-                tabPanel("Five")
-            )
-        ),
-        h4("标签页风格"),
-        tabsetPanel(
-            type = "pills",
-            tabPanel("One", icon=icon("home")),
-            tabPanel("Two"),
-            navbarMenu(
-                title = "Three",
-                tabPanel("Four"),
-                tabPanel("Five")
-            )
-        ),
+        tabPanel("Other Countries", "This panel is intentionally left blank"),
         tags$head(
-            tags$style(".tab-content .tab-content {border: 1px solid gray; min-height:200px;}")
-        )
+            tags$style(".tab-content .tab-content {
+                       min-height:400px;}")
     )
-    
-    server = function(session, input, output) {
-    }
+    )
+)
+
+server = function(input, output) {
+    output$txtout <- renderText({
+        paste(input$txt, input$slider, format(input$date), sep = ", ")
+    })
+    output$table <- renderTable({
+        head(cars, 4)
+    })
+}
 
 shinyApp(ui,server)
+
