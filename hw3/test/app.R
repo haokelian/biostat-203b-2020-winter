@@ -16,10 +16,10 @@ ui = tagList(
                  sidebarPanel(
                      helpText("Select type and range of cases"),
                      
-                 #     dateInput('date_glob',
-                 #               label = 'Date input',
-                 #               value = Sys.Date()
-                 #     ),
+                     dateInput('date_glob',
+                               label = 'Date input',
+                               value = Sys.Date()
+                     ),
                  # actionButton("action2", "Action button",
                  #              class = "btn-primary")
                  ),
