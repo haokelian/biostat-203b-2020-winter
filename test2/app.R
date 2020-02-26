@@ -1,5 +1,6 @@
 # install.packages("rgdal")
 # install.packages("leaflet")
+# install.packages("shinythemes")
 # remotes::install_github("GuangchuangYu/nCov2019")
 # remotes::install_github("GuangchuangYu/chinamap")
 
@@ -11,6 +12,8 @@ library(shiny)
 library(lubridate)
 library(leaflet) 
 library(rgdal)
+library(shinythemes)
+
 
 # Load data updated today ----
 # source: JHU #
@@ -87,7 +90,7 @@ last_date = lastdate[1] %>% pull(Date)
 
 # User interface ----
 ui = navbarPage(
-        theme = "darkly", "Cronavirus Telescope", 
+        theme = shinytheme("superhero"), "Cronavirus Telescope", 
         
 # Tab1: Global Map and Trend 
         # tabPanel("Map", leafletOutput("map_glob", height=1000)),
@@ -103,12 +106,23 @@ ui = navbarPage(
                                 choices = c("confirmed", "recovered", "death"),
                                 selected = "confirmed"),
                  ),
-                 mainPanel(helpText("Cases numbers are shown in log scale"),
-                           leafletOutput("map_glob")),
-                 h4("Data Table of Global Cases in Map"),
+                 mainPanel(helpText("Cases numbers are shown in log scale.
+                                     Tab circles to see real numbers"),
+                           leafletOutput("map_glob"),
+                           tags$style(HTML("
+                    .dataTables_wrapper .dataTables_length,
+                    .dataTables_wrapper .dataTables_filter,
+                    .dataTables_wrapper .dataTables_info,
+                    .dataTables_wrapper .dataTables_processing,
+                    .dataTables_wrapper .dataTables_paginate {color: #ffffff;}
+                    thead {color: #ffffff;}
+                    tbody {color: #000000;}"))),
+                 h3("Data Table of Global Cases in Map"),
+                 h4("Total Counts by Country"),
                  DT::dataTableOutput("table_glob"),
+                 h4("Counts by Province/State"),
                  DT::dataTableOutput("test"),
-                 h4("Trend"),
+                 h3("Trend"),
                  tabsetPanel(
                      tabPanel("Global Cases", 
                               plotOutput("trend_glob_c")
@@ -135,45 +149,34 @@ server = function(input, output) {
         glob_distribution <- glob_tbl %>%
             filter(Date == as.character(input$date_glob)) %>%
             filter(Case == as.character(input$type_glob)) %>%
-            group_by(`Country/Region`) %>%  
+            group_by(`Country/Region`) %>%
             summarise(total_count = sum(Count)) %>%
-            arrange(desc(total_count)) 
+            arrange(desc(total_count))
         glob_distribution
     }))
     
-    ##
     output$test <- DT::renderDataTable(DT::datatable({
         glob_mapdata <- glob_tbl %>%
             filter(Date == as.character(input$date_glob)) %>%
             filter(Case == as.character(input$type_glob)) %>%
             arrange(desc(Count)) 
-        glob_mapdata
+        select(glob_mapdata, `Province/State`, `Country/Region`, `Count`)
     }))
-    ##
     
     # plot the worldmap
-    ##
-    # output$map_glob <- renderPlot({
-    #     mapworld <-
-    #     borders("world", colour = "gray75", fill = "White",
-    #                     show.legend = FALSE) #basic map
-    #     ggplot() + mapworld + ylim(-60,90) +
-    #         labs(caption = paste("accessed date:", time(cov_data)))
-    # })
-    ##
     output$map_glob <- renderLeaflet({
-        # glob_mapdata <- glob_tbl %>%
-        #     filter(Date == as.character(input$date_glob)) %>%
-        #     filter(Case == as.character(input$type_glob)) %>%
-        #     arrange(desc(Count)) 
         Color <- switch(input$type_glob, 
                        "confirmed" = "#FF7F50",
                        "recovered" = "#A2CD5A",
                        "death" = "#8B4513")
+        glob_mapdata <- glob_tbl %>%
+            filter(Date == as.character(input$date_glob)) %>%
+            filter(Case == as.character(input$type_glob)) %>%
+            arrange(desc(Count))
         leaflet(glob_mapdata) %>% addTiles() %>%
             addCircles(lng = ~Long, lat = ~Lat, weight = 1, color = Color,
                        radius = ~sqrt(log10(Count)) * 100000,
-                       popup = ~`Province/State`)
+                       popup = ~`Province/State`, label = ~Count)
     })
     
     # plot the trends
