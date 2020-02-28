@@ -7,6 +7,11 @@ library(nCov2019)
 library(shiny)
 library(shinythemes)
 
+"Hubei", "Guangdong",
+"Zhejiang","Henan","Hunan",
+"Anhui","Jiangxi","Jiangsu",
+"Chongqing","Shandong","Sichuan",
+
 ui = tagList(
     shinythemes::themeSelector(),
     navbarPage(
