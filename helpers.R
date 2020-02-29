@@ -106,7 +106,7 @@ translate <- function(x) {
   })
 }
 
-# plot fill function
+# plot function
 fill_scale_continuous <- function(palette = "Reds") {
   cols = RColorBrewer::brewer.pal(6, palette)
   breaks = c(1, 10, 100, 1000, 10000)

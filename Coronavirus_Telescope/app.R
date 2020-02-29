@@ -356,12 +356,12 @@ server = function(input, output) {
     chn_prov <- chn_map %>% 
       count(NAME) %>%
       mutate(NAME_ENG = translate(NAME))
-
+    
     # filter data
     palatte <- switch(input$type_cn, 
-                    "confirmed" = "Reds",
-                    "recovered" = "Blues",
-                    "death" = "Purples")
+                      "confirmed" = "Reds",
+                      "recovered" = "Blues",
+                      "death" = "Purples")
     
     glob_tbl %>%
       filter(`Country/Region` %in% c("Mainland China", "Macau", "Hong Kong", "Taiwan")) %>%
@@ -374,7 +374,7 @@ server = function(input, output) {
       geom_sf(mapping = aes(fill = Count, geometry = geometry)) +
       fill_scale_continuous(palette) +
       theme_bw() 
-      
+    
     
   })
   
