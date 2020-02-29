@@ -1,3 +1,5 @@
+
+# Stock's visualization helpers
 if (!exists(".inflation")) {
   .inflation <- getSymbols('CPIAUCNS', src = 'FRED', 
      auto.assign = FALSE)

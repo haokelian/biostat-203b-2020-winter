@@ -1,21 +1,22 @@
 # Install and library packages --------------------
-install.packages("rgdal")
-install.packages("leaflet")
-install.packages("shinythemes")
-remotes::install_github("GuangchuangYu/nCov2019")
-remotes::install_github("GuangchuangYu/chinamap")
+# install.packages("leaflet")
+# install.packages("shinythemes")
+# remotes::install_github("GuangchuangYu/nCov2019")
+# remotes::install_github("GuangchuangYu/chinamap")
 
 library(dplyr)
 library(tidyverse)
 library(ggplot2)
 library(nCov2019)
+library(chinamap)
 library(shiny)
 library(lubridate)
 library(leaflet) 
-library(rgdal)
 library(shinythemes)
 library(quantmod)
 source("helpers.R")
+source("plot.R")
+source("utilities.R")
 
 
 # Load data updated today --------------------
@@ -341,16 +342,15 @@ server = function(input, output) {
                          }
                      })
         # get chinamap polygons by provinces and cities
-        require(chinamap)
+        # require(chinamap)
         cn = get_map_china()
         # translate provinces and cities
         cn$province <- trans_province(cn$province)
         if(as.character(input$date_cn) == as.Date(time(cn_data)))
-             {plot(cn_data, region = "china",
+             {plot.nCov2019(cn_data, region = "china",
               chinamap = cn, font.size=2)}
-        else{plot(cn_hist, region = "china",
-             chinamap = cn, date = as.character(input$date_cn),
-             font.size=2)}
+        else{plot.nCov2019History(cn_hist, region = "china",
+             chinamap = cn, date = as.character(input$date_cn), font.size=2)}
     })
     
 
