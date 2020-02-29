@@ -1,0 +1,10 @@
+---
+title: "hw3sol"
+author: "Haoke Lian"
+date: "2020/2/28"
+output: html_document
+---
+
+App Link:<https://kathylian.shinyapps.io/Coronavirus_Telescope/>
+
+Introduction of each step is shown in the code, stored in folder [Coronavirus_Telescope](https://github.com/haokelian/biostat-203b-2020-winter/tree/develop/Coronavirus_Telescope)
