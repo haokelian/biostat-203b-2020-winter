@@ -186,14 +186,13 @@ ui = navbarPage(
            sidebarPanel(
              dateInput('date_cn',
                        label = 'Date to display',
-                       value = time(cn_data)),
+                       value = last_date),
              selectInput("type_cn", 
                          label = "Type of cases to display",
                          choices = c("confirmed", "recovered", "death"),
                          selected = "confirmed"),
            ),
-           mainPanel(helpText("Data of one day before last date may
-                                    be missing due to fault of data resource"),
+           mainPanel(helpText("Map will be downloaded in a few seconds"),
                      plotOutput("map_cn")),
            h3("Trend"),
            h4("Trend in China"),
@@ -358,22 +357,24 @@ server = function(input, output) {
       mutate(NAME_ENG = translate(NAME))
     
     # filter data
-    palatte <- switch(input$type_cn, 
+    palette <- switch(input$type_cn, 
                       "confirmed" = "Reds",
                       "recovered" = "Blues",
                       "death" = "Purples")
     
     glob_tbl %>%
-      filter(`Country/Region` %in% c("Mainland China", "Macau", "Hong Kong", "Taiwan")) %>%
+      filter(`Country/Region` %in% c("Mainland China", "Macau", "Hong Kong",
+                                     "Taiwan")) %>%
       filter(Date == as.character(input$date_cn),
              Case == as.character(input$type_cn)) %>%
-      group_by(`Province/State`) %>%  
+      group_by(`Province/State`) %>%
       top_n(1, Date) %>%
       right_join(chn_prov, by = c("Province/State" = "NAME_ENG")) %>%
       ggplot() +
       geom_sf(mapping = aes(fill = Count, geometry = geometry)) +
       fill_scale_continuous(palette) +
-      theme_bw() 
+      theme_bw() +
+      labs(caption = paste("accessed date:", last_date))
     
     
   })
