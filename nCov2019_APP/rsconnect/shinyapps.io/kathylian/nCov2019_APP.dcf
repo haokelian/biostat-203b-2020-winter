@@ -1,0 +1,12 @@
+name: nCov2019_APP
+title: nCov2019_APP
+username:
+account: kathylian
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 1881121
+bundleId: 2838860
+url: https://kathylian.shinyapps.io/nCov2019_APP/
+when: 1582939956.81389
+asMultiple: FALSE
+asStatic: FALSE

@@ -1,0 +1,12 @@
+name: Coronavirus_Telescope
+title: Coronavirus_Telescope
+username:
+account: kathylian
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 1881668
+bundleId: 2839044
+url: https://kathylian.shinyapps.io/Coronavirus_Telescope/
+when: 1582948407.58624
+asMultiple: FALSE
+asStatic: FALSE
