@@ -182,8 +182,6 @@ study_admissions %>%
 
 Merge length of ICU stays into target of study `study_admissions`.
 ```{r}
-sql_query <- "SELECT i.subject_id, i.hadm_id, i.los
-              FROM icustays i;"
 study_admissions %>%
   left_join(
     select(tbl(con, "icustays"),
