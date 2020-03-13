@@ -1,0 +1,256 @@
+---
+title: "30-Day Mortality Rate of Myocardia Infarction Patients Admitted to CCU and Discharged"
+author: "Haoke Lian"
+date: "2020/3/12"
+output:
+  html_document:
+    toc: true
+    toc_depth: 4
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Task
+
+In this assignment, you are to write a report analyzing the electronic health record (EHR) data MIMIC-III. You report will demostrate your knowledge of working with PostgreSQL database, data visualization, and commonly used analytical methods such as logistic regression and neural network. Your report should include at least following parts:  
+
+1. An informative title. For example, _30-Day Mortality Rate of Myocardia Infarction Patients Admitted to CCU_.  
+
+2. Introduction. Describe the MIMIC-III data set and what research hypothesis/goal you are to address using this data.
+
+3. Data preparation. Create a study cohort from MIMIC-III corresponding to your research hypothesis/goal. See the examplary code below. Use a CONSORT flow diagram to summarize your steps to create the cohort.
+
+4. Data visualization. Use visualization to summarize the cohort you created. 
+
+5. Analytics. Use at least two analytical approaches to address your research hypothesis/goal. For example, we can use (1) logistic regression and (2) neural network to build a predictive model for the 30-day mortality rate of patients admitted into CCU and compare their predictive performance. Summarize your results in graphs.
+
+6. Conclusions. 
+
+# Introduction
+
+This project is a data analysis of the correlation of "30-day mortality rate of myocardia infarction patients admitted to CCU(Coronary Care Unit) and discharged from hospital" with patients' features, hospital stays and chartevents. The patients' data is based on MIMIC-III (Medical Information Mart for Intensive Care III), a large, freely-available database comprising deidentified health-related data associated with over forty thousand patients who stayed in critical care units of the Beth Israel Deaconess Medical Center between 2001 and 2012. The database includes information such as demographics, vital sign measurements made at the bedside (~1 data point per hour), laboratory test results, procedures, medications, caregiver notes, imaging reports, and mortality (both in and out of hospital). Specificly, for this research, **********are discussed to simulate the possible 30-day mortality rate of a myocardia infraction patient with certain features.
+
+# Data preparation
+
+## Tidy data
+Load database, tidy data and data visualization libraries and the tidyverse frontend:
+```{r}
+library(DBI)
+library(RPostgreSQL)
+library(tidyverse)
+library(lubridate)
+library(dplyr)
+library(ggplot2)
+library(shape)
+library(diagram)
+```
+
+Credentials for using PostgreSQL database.
+```{r}
+# Load configuration settings
+dbdriver <- 'PostgreSQL'
+user  <- 'postgres'
+password <- 'postgres'
+dbname <- 'mimic'
+schema <- 'mimiciii'
+# Connect to the database using the configuration settings
+con <- dbConnect(RPostgreSQL::PostgreSQL(), 
+                 dbname = dbname, 
+                 user = user, 
+                 password = password)
+# Set the default schema
+dbExecute(con, paste("SET search_path TO ", schema, sep=" "))
+con
+```
+
+First, create a (query) table of patients who were directly admitted into CCU and their hosipital admissions.
+```{r}
+tbl(con, "transfers") %>%
+  select(subject_id, hadm_id, prev_careunit, curr_careunit) %>%
+  filter(is.na(prev_careunit) & curr_careunit == "CCU") %>%
+  select(subject_id, hadm_id) %>%
+  distinct() %>%
+  print() -> ccu_admissions
+```
+
+Next, find all possible ICD-9 codes related to myocardial infarction, by searching for string `myocardial infarction` in the `long_title` of table `d_icd_diagnoses`. Then filter admissions of myocardial infarction patients by icd9_code.
+```{r}
+tbl(con, "d_icd_diagnoses") %>%
+  filter(str_detect(tolower(long_title), "myocardial infarction")) %>%
+  print() -> mi_codes
+
+tbl(con, "diagnoses_icd") %>%
+  semi_join(mi_codes, by = "icd9_code") %>%
+  print() -> mi_admissions
+```
+
+In order to focus on patients for whom MI was central to their hospitalization, admissions of patients with MI as any of the 5 most important diagnosis positions areincluded, according to the `seq_num` field.`group_by()` and `filter()` are used to limit the query to the first MI diagnosis for each admission to avoid duplicate admissions.
+```{r}
+mi_admissions %>%
+  filter(seq_num <= 5) %>%
+  group_by(subject_id, hadm_id) %>%
+  filter(min_rank(seq_num) <= 1) %>%
+  ungroup() %>%
+  select(subject_id, hadm_id, icd9_code, seq_num) %>%
+  print() -> mi_admissions
+```
+
+`inner_join` the table of admissions to CCU and the table of admissions that include MI diagnosis as top 5 diagnosis, to the table of MI patients and admissions, i.e. the target of study.
+```{r}
+ccu_admissions %>%
+  inner_join(mi_admissions, by = c("subject_id", "hadm_id")) %>%
+  print() -> study_admissions
+```
+
+Create a logical variable indicating whether MI is the principal diagonosis or not.
+```{r}
+study_admissions %>%
+  mutate(principal_dx = seq_num == 1) %>%
+  select(-seq_num) %>%
+  print() -> study_admissions
+```
+
+Add the severity of patients’ ailments by count the number of APR(All Payers Registry) included in the `DRG` codes in `drgcodes` table and pull the drug severity information and right-join it to our query table.
+```{r}
+tbl(con, "drgcodes") %>%
+  filter(str_detect(drg_type, "APR")) %>%
+  select(subject_id, hadm_id, drg_severity) %>%
+  right_join(study_admissions, by = c("subject_id", "hadm_id")) %>%
+  mutate(drg_severity = ifelse(is.na(drg_severity), 1, drg_severity)) %>%
+  print() -> study_admissions
+```
+
+Include the admission time `admittime`, discharge time `dischtime`, date of birth `dob`, and date of death `dod` of patients discharged from hospital.
+```{r}
+study_admissions %>%
+  left_join(
+    select(tbl(con, "admissions"),
+           subject_id, hadm_id, admittime, dischtime, hospital_expire_flag
+    ), by = c("subject_id", "hadm_id")
+  ) %>%
+  filter(hospital_expire_flag == 0) %>%
+  select(-hospital_expire_flag) %>%
+  left_join(
+    select(tbl(con, "patients"), subject_id, dob, dod),
+    by = "subject_id"
+  ) %>%
+  print(width = Inf) -> study_admissions
+```
+
+Add 30-day mortality rate as a logical viriable, `age` (at admission) variable into the table, and remove patients of 90 years and older, for their ages are artificially inflated.
+```{r}
+study_admissions %>%
+  mutate(tt_death = date_part("day", dod) - date_part("day", dischtime)) %>%
+  mutate(mortality = tt_death <= 30) %>%
+  mutate(age = date_part("year", admittime) - date_part("year", dob)) %>%
+  filter(age < 90) %>%
+  mutate(age = age - ifelse(
+    date_part("month", admittime) < date_part("month", dob) |
+      (
+        date_part("month", admittime) == date_part("month", dob) &
+          date_part("day", admittime) < date_part("day", dob)
+      ),
+    1,
+    0
+  )) %>%
+  select(-admittime, -dischtime, -dob, -dod, -tt_death) %>%
+  select(subject_id, hadm_id, age, mortality, everything()) %>%
+  print() -> study_admissions
+```
+
+Merge patients' information (insurance, gender) into target of study `study_admissions`.
+```{r}
+tbl(con, "admissions") %>%
+  select(subject_id, insurance) %>%
+  distinct() %>%
+  print() -> study_subjects
+```
+```{r}
+tbl(con, "patients") %>%
+  select(subject_id, gender) %>%
+  distinct() %>%
+  full_join(study_subjects, by = "subject_id") %>%
+  print() -> study_subjects
+```
+```{r}
+study_admissions %>%
+  left_join(study_subjects, by = "subject_id", copy = TRUE) %>%
+  print() -> study_admissions
+```
+
+Merge length of ICU stays into target of study `study_admissions`.
+```{r}
+sql_query <- "SELECT i.subject_id, i.hadm_id, i.los
+              FROM icustays i;"
+study_admissions %>%
+  left_join(
+    select(tbl(con, "icustays"),
+           subject_id, hadm_id, los), by = c("subject_id", "hadm_id")
+  ) %>%
+  print() -> study_admissions
+```
+
+
+Close the connection:
+```{r}
+dbDisconnect(con)
+```
+
+## CONSORT Flow Diagrams
+
+CONSORT Flow Diagrams can be used to plot the flow of data selection of a patient cohort.   
+
+```{r plot}
+# set margins and multiplot
+par(mfrow = c(1, 1))
+par(mar = c(0, 0, 0, 0))
+
+# initialise a plot device
+openplotmat()
+
+# position of boxes
+# 1st column indicates x axis position between 0 and 1
+# 2nd column indicates y axis position between 0 and 1
+# automatically assigns vertical position
+num_of_boxes <- 6
+auto_coords = coordinates(num_of_boxes)
+vert_pos = rev(auto_coords[,1])
+box_pos <- matrix(nrow = num_of_boxes, ncol = 2, data = 0)
+box_pos[1,] = c(0.20, vert_pos[1]) # 1st box
+box_pos[2,] = c(0.70, vert_pos[2]) # 2nd box
+box_pos[3,] = c(0.70, vert_pos[3]) # 3rd box
+box_pos[4,] = c(0.70, vert_pos[4]) # etc...
+box_pos[5,] = c(0.70, vert_pos[5])
+box_pos[6,] = c(0.20, vert_pos[6])
+
+# content of boxes
+box_content <- matrix(nrow = num_of_boxes, ncol = 1, data = 0)
+box_content[1] = "All patients in MIMIC-III \n n = 58,976" # 1st box
+box_content[2] = "Exclude patients of age < 18 \n n = 8,180" # 2nd box
+box_content[3] = "Exclude patients with no ICU admissions \n n = 1,071" # 3rd box
+box_content[4] = "Exclude patients with diabetes \n n = 1,324" # etc...
+box_content[5] = "Exclude patients with sepsis \n n = 4,804"
+box_content[6] = "Study cohort \n n = 43,597"
+
+# adjust the size of boxes to fit content
+box_x <- c(0.20, 0.25, 0.25, 0.25, 0.25, 0.20)
+box_y <- c(0.07, 0.07, 0.07, 0.07, 0.07, 0.07)
+
+# Draw the arrows
+straightarrow(from = c(box_pos[1,1],box_pos[2,2]), to = box_pos[2,], lwd = 1)  
+straightarrow(from = c(box_pos[1,1],box_pos[3,2]), to = box_pos[3,], lwd = 1)  
+straightarrow(from = c(box_pos[1,1],box_pos[4,2]), to = box_pos[4,], lwd = 1)  
+straightarrow(from = c(box_pos[1,1],box_pos[5,2]), to = box_pos[5,], lwd = 1)  
+straightarrow(from = box_pos[1,], to = box_pos[6,], lwd = 1)
+
+# Draw the boxes
+for (i in 1:num_of_boxes) {
+  textrect(mid = box_pos[i,], radx = box_x[i], rady = box_y[i], 
+           lab = box_content[i], 
+           shadow.col = "grey")
+  }
+```
+
+
