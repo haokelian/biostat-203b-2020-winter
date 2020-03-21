@@ -30,7 +30,7 @@ In this assignment, you are to write a report analyzing the electronic health re
 
 # Introduction
 
-This project is a data analysis of the correlation of "30-day mortality rate of myocardia infarction patients admitted to CCU(Coronary Care Unit) and discharged from hospital" with patients' features, hospital stays and chartevents. The patients' data is based on MIMIC-III (Medical Information Mart for Intensive Care III), a large, freely-available database comprising deidentified health-related data associated with over forty thousand patients who stayed in critical care units of the Beth Israel Deaconess Medical Center between 2001 and 2012. The database includes information such as demographics, vital sign measurements made at the bedside (~1 data point per hour), laboratory test results, procedures, medications, caregiver notes, imaging reports, and mortality (both in and out of hospital). Specificly, for this research, **********are discussed to simulate the possible 30-day mortality rate of a myocardia infraction patient with certain features.
+This project is a data analysis of the correlation of "30-day mortality rate of myocardia infarction patients admitted to CCU(Coronary Care Unit) and discharged from hospital" with patients' features, hospital stays and chartevents. The patients' data is based on MIMIC-III (Medical Information Mart for Intensive Care III), a large, freely-available database comprising deidentified health-related data associated with over forty thousand patients who stayed in critical care units of the Beth Israel Deaconess Medical Center between 2001 and 2012. The database includes information such as demographics, vital sign measurements made at the bedside (~1 data point per hour), laboratory test results, procedures, medications, caregiver notes, imaging reports, and mortality (both in and out of hospital). Specificly, for this research, age and gender of patients, drug severity information, long title of disease, whether myocardia infraction is the principle disease or not, length of hospital stay are discussed to simulate the possible 30-day mortality rate of a myocardia infraction patient with certain features.
 
 # Data preparation
 
@@ -82,7 +82,7 @@ tbl(con, "d_icd_diagnoses") %>%
   print() -> mi_codes
 
 tbl(con, "diagnoses_icd") %>%
-  semi_join(mi_codes, by = "icd9_code") %>%
+  right_join(mi_codes, by = "icd9_code") %>%
   print() -> mi_admissions
 ```
 
@@ -93,7 +93,7 @@ mi_admissions %>%
   group_by(subject_id, hadm_id) %>%
   filter(min_rank(seq_num) <= 1) %>%
   ungroup() %>%
-  select(subject_id, hadm_id, icd9_code, seq_num) %>%
+  select(subject_id, hadm_id, long_title, seq_num) %>%
   print() -> mi_admissions
 ```
 
@@ -187,6 +187,9 @@ study_admissions %>%
     select(tbl(con, "icustays"),
            subject_id, hadm_id, los), by = c("subject_id", "hadm_id")
   ) %>%
+  group_by(subject_id, hadm_id) %>%
+  filter(row_number() == 1) %>%
+  ungroup() %>%
   print() -> study_admissions
 ```
 
@@ -219,18 +222,18 @@ box_pos <- matrix(nrow = num_of_boxes, ncol = 2, data = 0)
 box_pos[1,] = c(0.20, vert_pos[1]) # 1st box
 box_pos[2,] = c(0.70, vert_pos[2]) # 2nd box
 box_pos[3,] = c(0.70, vert_pos[3]) # 3rd box
-box_pos[4,] = c(0.70, vert_pos[4]) # etc...
+box_pos[4,] = c(0.70, vert_pos[4])
 box_pos[5,] = c(0.70, vert_pos[5])
 box_pos[6,] = c(0.20, vert_pos[6])
 
 # content of boxes
 box_content <- matrix(nrow = num_of_boxes, ncol = 1, data = 0)
-box_content[1] = "All patients in MIMIC-III \n n = 58,976" # 1st box
-box_content[2] = "Exclude patients of age < 18 \n n = 8,180" # 2nd box
-box_content[3] = "Exclude patients with no ICU admissions \n n = 1,071" # 3rd box
-box_content[4] = "Exclude patients with diabetes \n n = 1,324" # etc...
-box_content[5] = "Exclude patients with sepsis \n n = 4,804"
-box_content[6] = "Study cohort \n n = 43,597"
+box_content[1] = "All admissions in MIMIC-III \n n = 58,976" # 1st box
+box_content[2] = "Exclude admissions to other ICU type \n n = 51,324" # 2nd box
+box_content[3] = "Exclude patients of other disease \n n = 6,193" # 3rd box
+box_content[4] = "Exclude patients died in hospital \n n = 168"
+box_content[5] = "Exclude patients older than 90 years old \n n = 82"
+box_content[6] = "Study cohort \n n = 1,209"
 
 # adjust the size of boxes to fit content
 box_x <- c(0.20, 0.25, 0.25, 0.25, 0.25, 0.20)
