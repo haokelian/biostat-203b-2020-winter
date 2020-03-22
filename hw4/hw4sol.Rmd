@@ -37,6 +37,7 @@ This project is a data analysis of the correlation of "30-day mortality rate of 
 ## Tidy data
 Load database, tidy data and data visualization libraries and the tidyverse frontend:
 ```{r}
+# library(aod)
 library(DBI)
 library(RPostgreSQL)
 library(tidyverse)
@@ -45,6 +46,7 @@ library(dplyr)
 library(ggplot2)
 library(shape)
 library(diagram)
+library(keras)
 ```
 
 Credentials for using PostgreSQL database.
@@ -191,13 +193,17 @@ study_admissions %>%
   filter(row_number() == 1) %>%
   ungroup() %>%
   print() -> study_admissions
+
+study_admissions = collect(study_admissions)
+study_admissions[, 4][is.na(study_admissions[, 4])] = 0
+study_admissions$mortality = as.logical(study_admissions$mortality)
 ```
 
 
-<!-- Close the connection: -->
-<!-- ```{r} -->
-<!-- dbDisconnect(con) -->
-<!-- ``` -->
+Close the connection:
+```{r}
+dbDisconnect(con)
+```
 
 ## CONSORT Flow Diagrams
 
@@ -334,3 +340,72 @@ study_admissions %>%
   labs(x = "Length of ICU stay", y = "Number of death 
        within 30 days after hospital discharge")
 ```
+
+# Analytics
+
+According to the visualiztion of data, durg serverity information and age of patients and the length of ICU stay are selected as main factors of 30-day motality rate after hospital discharge because of the large difference between 30-day mortality rates of different durg serverities, length of ICU stays and ages.
+
+## Logistic Regression Using the Generalized Linear Model Function
+
+### Generate description for variables
+This dataset has a binary response (outcome, dependent) variable mortality. There are three predictor variables: age, lenth of ICU stay and drug severity. Treat the variables age, lenth of ICU stay as continuous. The variable drug severity takes on the values 1 through 4. Get basic descriptives for the entire data set by using summary.
+```{r}
+study_admissions$mortality = as.integer(study_admissions$mortality)
+study_admissions$drg_severity <- factor(study_admissions$drg_severity)
+study_logit <- glm(mortality ~ age + drg_severity + los, data = study_admissions, family = "binomial")
+(summary(study_logit))
+```
+According to the output of GLM, the deviance residuals are shown, which are a measure of model fit. This part of output shows the distribution of the deviance residuals for individual cases used in the model. Then use summaries of the deviance statistic to assess model fit. The next part of the output shows the coefficients, their standard errors, the z-statistic (sometimes called a Wald z-statistic), and the associated p-values. Both gre and gpa are statistically significant, as are the three terms for rank. 
+
+The logistic regression coefficients give the change in the log odds of the outcome for a one unit increase in the predictor variable:
+-For every one unit change in age, the log odds of motality increases by 0.06648.
+-For a one unit increase in length of ICU stay, the log odds of mortality increases by 0.096264.
+-Having a drug severity of 2, versus drug severity of 1, changes the log odds of motality by -1.284235.
+
+### Obtain confidence intervals
+Use the confint function to obtain confidence intervals for the coefficient estimates. Note that for logistic models, confidence intervals are based on the profiled log-likelihood function. Get CIs based on just the standard errors by using the default method.
+```{r}
+confint(study_logit)
+```
+
+### Predict 30-day mortality rate
+Calculate the predicted probability of admission at each value of rank, holding length of ICU stay at its mean. Generate the predicted probabilities (the first line below) and ask for standard errors to plot a confidence interval. Get the estimates on the link scale and back transform both the predicted values and confidence limits into probabilities.
+```{r}
+testdata1 <- with(study_admissions, data.frame(age = rep(seq(from = 0, 
+                                                                    to = 100,
+                                                            length.out = 100),4
+                                                         ),
+                                                 los = mean(los), 
+                                                 drg_severity = factor(rep(1:4, 
+                                                                    each = 100)
+                                                            )
+                                              ))
+testdata2 <- cbind(testdata1, predict(study_logit,
+                                      newdata = testdata1, 
+                                      type = "link",
+    se = TRUE))
+(testdata2 <- within(testdata2, {
+    Predicted_Mortality <- plogis(fit)
+    LL <- plogis(fit - (1.96 * se.fit))
+    UL <- plogis(fit + (1.96 * se.fit))
+}))
+```
+
+Use graphs of predicted probabilities to understand present the model. Below is a plot with the predicted 30_day mortality rate verses age of patients, comparing different drug serverities, with 95% confidence intervals.
+```{r}
+ggplot(testdata2, aes(x = age, y = Predicted_Mortality)) + 
+  geom_ribbon(aes(ymin = LL, ymax = UL, fill = drg_severity), alpha = 0.2) + 
+  geom_line(aes(colour = drg_severity), size = 1)
+```
+
+## Neural Network
+
+### Prepare data
+Aquire data:
+```{r}
+(x_train = as.matrix(select(study_admissions, age, los, drg_severity)))
+(y_train = as.matrix(select(study_admissions, mortality)))
+(x_test = as.matrix(testdata1))
+
+```
+
