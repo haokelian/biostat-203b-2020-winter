@@ -30,7 +30,7 @@ In this assignment, you are to write a report analyzing the electronic health re
 
 # Introduction
 
-This project is a data analysis of the correlation of "30-day mortality rate of myocardia infarction patients admitted to CCU(Coronary Care Unit) and discharged from hospital" with patients' features, hospital stays and chartevents. The patients' data is based on MIMIC-III (Medical Information Mart for Intensive Care III), a large, freely-available database comprising deidentified health-related data associated with over forty thousand patients who stayed in critical care units of the Beth Israel Deaconess Medical Center between 2001 and 2012. The database includes information such as demographics, vital sign measurements made at the bedside (~1 data point per hour), laboratory test results, procedures, medications, caregiver notes, imaging reports, and mortality (both in and out of hospital). Specificly, for this research, age and gender of patients, drug severity information, long title of disease, whether myocardia infraction is the principle disease or not, length of hospital stay are discussed to simulate the possible 30-day mortality rate of a myocardia infraction patient with certain features.
+This project is a data analysis of the correlation of "30-day mortality rate of myocardia infarction patients admitted to CCU(Coronary Care Unit) and discharged from hospital" with patients' features, hospital stays and chartevents. The patients' data is based on MIMIC-III (Medical Information Mart for Intensive Care III), a large, freely-available database comprising deidentified health-related data associated with over forty thousand patients who stayed in critical care units of the Beth Israel Deaconess Medical Center between 2001 and 2012. The database includes information such as demographics, vital sign measurements made at the bedside (~1 data point per hour), laboratory test results, procedures, medications, caregiver notes, imaging reports, and mortality (both in and out of hospital). Specificly, for this research, age and gender of patients, insurance type, drug severity information, long title of disease, whether myocardia infraction is the principle disease or not, length of ICU stay are discussed to simulate the possible 30-day mortality rate of a myocardia infraction patient with certain features.
 
 # Data preparation
 
@@ -194,10 +194,10 @@ study_admissions %>%
 ```
 
 
-Close the connection:
-```{r}
-dbDisconnect(con)
-```
+<!-- Close the connection: -->
+<!-- ```{r} -->
+<!-- dbDisconnect(con) -->
+<!-- ``` -->
 
 ## CONSORT Flow Diagrams
 
@@ -254,4 +254,83 @@ for (i in 1:num_of_boxes) {
   }
 ```
 
+# Data Visualization
 
+In this part, the correlation between a certain feature of patients and the 30-day mortality rate will be displayed, based on MIMIC-III data.
+
+## Age of Patients
+Display how the mortality rate affected by age of patients.
+```{r}
+ggplot(data = study_admissions) + 
+  geom_bar(mapping = aes(x = age, fill = mortality), position = "fill") +
+  theme(legend.position="bottom") +
+  scale_fill_discrete(name="Death within 30 days after hospital discharge") +
+  labs(y = "Mortality rate")
+```
+
+## Gender of Patients
+Display how the mortality rate affected by gender of patients.
+```{r}
+ggplot(data = study_admissions) + 
+  geom_bar(mapping = aes(x = gender, fill = mortality), position = "fill") +
+  theme(legend.position="bottom") +
+  scale_fill_discrete(name="Death within 30 days after hospital discharge") +
+  labs(y = "Mortality rate")
+```
+
+## Insurance type of patients
+Display how the mortality rate affected by insurance type of patients.
+```{r}
+ggplot(data = study_admissions) + 
+  geom_bar(mapping = aes(x = insurance, fill = mortality), position = "fill") +
+  theme(legend.position="bottom") +
+  scale_fill_discrete(name="Death within 30 days after hospital discharge") +
+  labs(y = "Mortality rate")
+```
+
+## Drug severity information of patients
+Display how the mortality rate affected by drug severity information of Patients.
+```{r}
+ggplot(data = study_admissions) + 
+  geom_bar(mapping = aes(x = drg_severity, fill = mortality), position = "fill") +
+  theme(legend.position="bottom") +
+  scale_fill_discrete(name="Death within 30 days after hospital discharge") +
+  labs(y = "Mortality rate") +
+  labs(x = "Drug severity information of patients")
+```
+
+## Long title of patient's disease
+Display the portion of each disease in died patients.
+```{r}
+study_admissions %>%
+  filter(mortality == TRUE) %>%
+  ggplot(mapping = aes(x = "",
+                       fill = long_title)) + 
+  geom_bar(width = 1) + 
+  coord_polar("y") +
+  # theme(legend.position="bottom") +
+  scale_fill_discrete(name="Long title of patient's disease") +
+  labs(x = "", y = "", title = "Death within 30 days") 
+```
+
+## Myocardia infraction is the principle disease or not
+Display how the mortality rate affected by whether myocardia infraction is the principle disease or not.
+```{r}
+ggplot(data = study_admissions) + 
+  geom_bar(mapping = aes(x = principal_dx, fill = mortality), position = "fill") +
+  theme(legend.position="bottom") +
+  scale_fill_discrete(name="Death within 30 days after hospital discharge") +
+  labs(y = "Mortality rate") +
+  labs(x = "Myocardia infraction is the principle disease or not")
+```
+
+## Length of ICU stay
+Display the correlation between length of ICU stay and number of death within 30 days after hosipital discharge.
+```{r}
+study_admissions %>%
+  filter(mortality == TRUE) %>%
+  ggplot(aes(x = los)) +
+  geom_freqpoly(bins = 100) + 
+  labs(x = "Length of ICU stay", y = "Number of death 
+       within 30 days after hospital discharge")
+```
