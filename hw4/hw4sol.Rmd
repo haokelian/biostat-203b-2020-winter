@@ -10,6 +10,7 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+# , cache = TRUE
 ```
 
 # Task
@@ -47,6 +48,7 @@ library(ggplot2)
 library(shape)
 library(diagram)
 library(keras)
+library(tensorflow)
 ```
 
 Credentials for using PostgreSQL database.
@@ -351,8 +353,11 @@ According to the visualiztion of data, durg serverity information and age of pat
 This dataset has a binary response (outcome, dependent) variable mortality. There are three predictor variables: age, lenth of ICU stay and drug severity. Treat the variables age, lenth of ICU stay as continuous. The variable drug severity takes on the values 1 through 4. Get basic descriptives for the entire data set by using summary.
 ```{r}
 study_admissions$mortality = as.integer(study_admissions$mortality)
-study_admissions$drg_severity <- factor(study_admissions$drg_severity)
-study_logit <- glm(mortality ~ age + drg_severity + los, data = study_admissions, family = "binomial")
+study_admissions_ = study_admissions
+study_admissions_$drg_severity <- factor(study_admissions_$drg_severity)
+study_logit <- glm(mortality ~ age + drg_severity + los, 
+                   data = study_admissions_, 
+                   family = "binomial")
 (summary(study_logit))
 ```
 According to the output of GLM, the deviance residuals are shown, which are a measure of model fit. This part of output shows the distribution of the deviance residuals for individual cases used in the model. Then use summaries of the deviance statistic to assess model fit. The next part of the output shows the coefficients, their standard errors, the z-statistic (sometimes called a Wald z-statistic), and the associated p-values. Both gre and gpa are statistically significant, as are the three terms for rank. 
@@ -371,7 +376,7 @@ confint(study_logit)
 ### Predict 30-day mortality rate
 Calculate the predicted probability of admission at each value of rank, holding length of ICU stay at its mean. Generate the predicted probabilities (the first line below) and ask for standard errors to plot a confidence interval. Get the estimates on the link scale and back transform both the predicted values and confidence limits into probabilities.
 ```{r}
-testdata1 <- with(study_admissions, data.frame(age = rep(seq(from = 0, 
+testdata1 <- with(study_admissions_, data.frame(age = rep(seq(from = 0, 
                                                                     to = 100,
                                                             length.out = 100),4
                                                          ),
@@ -398,14 +403,85 @@ ggplot(testdata2, aes(x = age, y = Predicted_Mortality)) +
   geom_line(aes(colour = drg_severity), size = 1)
 ```
 
-## Neural Network
+## Neural Network with Multi-Layer Perceptron
 
 ### Prepare data
-Aquire data:
+Aquire data and separate the data set to training and test data.
 ```{r}
-(x_train = as.matrix(select(study_admissions, age, los, drg_severity)))
-(y_train = as.matrix(select(study_admissions, mortality)))
-(x_test = as.matrix(testdata1))
+study_admissions$mortality = as.integer(study_admissions$mortality)
+x_matrix = as.matrix(select(study_admissions, age, los, drg_severity))
+y_matrix = as.matrix(select(study_admissions, mortality))
+x_train = x_matrix[2:1000, ]
+x_test = x_matrix[1000:1209, ]
+dim(x_train)
+dim(x_test)
 
+y_train = y_matrix[2:1000]
+y_train <- array_reshape(y_train, c(999, 1))
+y_test = y_matrix[1000:1209]
+y_test <- array_reshape(y_test, c(210, 1))
+dim(y_train)
+dim(y_test)
 ```
 
+Encode y as binary class matrix:
+```{r}
+y_train <- to_categorical(y_train, 2)
+y_test <- to_categorical(y_test, 2)
+dim(y_train)
+dim(y_test)
+```
+
+### Define the model
+Define a sequential model:
+```{r}
+model <- keras_model_sequential() 
+model %>% 
+  layer_dense(units = 3, activation = 'relu', input_shape = c(3)) %>%
+  layer_dropout(rate = 0) %>%
+  layer_dense(units = 2, activation = 'softmax', input_shape = c(3))
+model %>% save_model_tf("model")
+summary(model)
+```
+
+### Compile the model
+Compile the model with appropriate loss function, optimizer, and metrics:
+```{r}
+model %>% compile(
+  loss = 'categorical_crossentropy',
+  optimizer = optimizer_rmsprop(),
+  metrics = c('accuracy')
+)
+```
+
+### Training and validation
+```{r}
+history <- model %>% fit(
+  x_train, y_train,
+  epochs = 20, batch_size = NULL,
+  validation_split = 0.2
+)
+
+plot(history)
+```
+
+### Evaluate model performance on the test data:
+```{r}
+model %>% evaluate(x_test, y_test)
+```
+The loss of data is high. The possible reason is the epoch is higher than enough, so that the model is over-trained. However, after several tries to cut down the loss by decreasing the epoch, it ends up with higher data loss.
+
+### Generate predictions on new data:
+```{r}
+model %>% predict_classes(x_test) %>% head()
+```
+0 value in the prediction means that none of these patients will be died in 30 days after hospital discharge.
+
+## Conclusion
+
+In the beginning of this research, it is assumed that there are multiple factors that influence the 30-day mortality rate of patients after hospital discharge: age and gender of patients, insurance type, drug severity information, the specific disease, whether myocardia infraction is the principle disease or not, length of ICU stay are discussed to simulate the possible 30-day mortality rate of a myocardia infraction patient with certain features. However, according to the visualiztion of data, durg serverity information and age of patients and the length of ICU stay are selected as main factors of 30-day motality rate after hospital discharge, because different value of these variable leads to different 30-day mortality rates. The result of this simulization is that:
+
+-Increasement of the patient's age increases the 30-day motality rate by 1.07 times.
+-Increasement of length of ICU stay increases the 30-day motality rate by 1.10 times.
+-Having a drug severity of 2, versus drug severity of 1, decreases the 30-day motality rate by 1.28.
+-Neural network with multi-layer perceptron is about 86% accurate with about 50% loss of data.
