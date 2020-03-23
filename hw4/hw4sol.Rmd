@@ -1,0 +1,487 @@
+---
+title: "30-Day Mortality Rate of Myocardia Infarction Patients Admitted to CCU and Discharged"
+author: "Haoke Lian"
+date: "2020/3/12"
+output:
+  html_document:
+    toc: true
+    toc_depth: 4
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# , cache = TRUE
+```
+
+# Task
+
+In this assignment, you are to write a report analyzing the electronic health record (EHR) data MIMIC-III. You report will demostrate your knowledge of working with PostgreSQL database, data visualization, and commonly used analytical methods such as logistic regression and neural network. Your report should include at least following parts:  
+
+1. An informative title. For example, _30-Day Mortality Rate of Myocardia Infarction Patients Admitted to CCU_.  
+
+2. Introduction. Describe the MIMIC-III data set and what research hypothesis/goal you are to address using this data.
+
+3. Data preparation. Create a study cohort from MIMIC-III corresponding to your research hypothesis/goal. See the examplary code below. Use a CONSORT flow diagram to summarize your steps to create the cohort.
+
+4. Data visualization. Use visualization to summarize the cohort you created. 
+
+5. Analytics. Use at least two analytical approaches to address your research hypothesis/goal. For example, we can use (1) logistic regression and (2) neural network to build a predictive model for the 30-day mortality rate of patients admitted into CCU and compare their predictive performance. Summarize your results in graphs.
+
+6. Conclusions. 
+
+# Introduction
+
+This project is a data analysis of the correlation of "30-day mortality rate of myocardia infarction patients admitted to CCU(Coronary Care Unit) and discharged from hospital" with patients' features, hospital stays and chartevents. The patients' data is based on MIMIC-III (Medical Information Mart for Intensive Care III), a large, freely-available database comprising deidentified health-related data associated with over forty thousand patients who stayed in critical care units of the Beth Israel Deaconess Medical Center between 2001 and 2012. The database includes information such as demographics, vital sign measurements made at the bedside (~1 data point per hour), laboratory test results, procedures, medications, caregiver notes, imaging reports, and mortality (both in and out of hospital). Specificly, for this research, age and gender of patients, insurance type, drug severity information, long title of disease, whether myocardia infraction is the principle disease or not, length of ICU stay are discussed to simulate the possible 30-day mortality rate of a myocardia infraction patient with certain features.
+
+# Data preparation
+
+## Tidy data
+Load database, tidy data and data visualization libraries and the tidyverse frontend:
+```{r}
+# library(aod)
+library(DBI)
+library(RPostgreSQL)
+library(tidyverse)
+library(lubridate)
+library(dplyr)
+library(ggplot2)
+library(shape)
+library(diagram)
+library(keras)
+library(tensorflow)
+```
+
+Credentials for using PostgreSQL database.
+```{r}
+# Load configuration settings
+dbdriver <- 'PostgreSQL'
+user  <- 'postgres'
+password <- 'postgres'
+dbname <- 'mimic'
+schema <- 'mimiciii'
+# Connect to the database using the configuration settings
+con <- dbConnect(RPostgreSQL::PostgreSQL(), 
+                 dbname = dbname, 
+                 user = user, 
+                 password = password)
+# Set the default schema
+dbExecute(con, paste("SET search_path TO ", schema, sep=" "))
+con
+```
+
+First, create a (query) table of patients who were directly admitted into CCU and their hosipital admissions.
+```{r}
+tbl(con, "transfers") %>%
+  select(subject_id, hadm_id, prev_careunit, curr_careunit) %>%
+  filter(is.na(prev_careunit) & curr_careunit == "CCU") %>%
+  select(subject_id, hadm_id) %>%
+  distinct() %>%
+  print() -> ccu_admissions
+```
+
+Next, find all possible ICD-9 codes related to myocardial infarction, by searching for string `myocardial infarction` in the `long_title` of table `d_icd_diagnoses`. Then filter admissions of myocardial infarction patients by icd9_code.
+```{r}
+tbl(con, "d_icd_diagnoses") %>%
+  filter(str_detect(tolower(long_title), "myocardial infarction")) %>%
+  print() -> mi_codes
+
+tbl(con, "diagnoses_icd") %>%
+  right_join(mi_codes, by = "icd9_code") %>%
+  print() -> mi_admissions
+```
+
+In order to focus on patients for whom MI was central to their hospitalization, admissions of patients with MI as any of the 5 most important diagnosis positions areincluded, according to the `seq_num` field.`group_by()` and `filter()` are used to limit the query to the first MI diagnosis for each admission to avoid duplicate admissions.
+```{r}
+mi_admissions %>%
+  filter(seq_num <= 5) %>%
+  group_by(subject_id, hadm_id) %>%
+  filter(min_rank(seq_num) <= 1) %>%
+  ungroup() %>%
+  select(subject_id, hadm_id, long_title, seq_num) %>%
+  print() -> mi_admissions
+```
+
+`inner_join` the table of admissions to CCU and the table of admissions that include MI diagnosis as top 5 diagnosis, to the table of MI patients and admissions, i.e. the target of study.
+```{r}
+ccu_admissions %>%
+  inner_join(mi_admissions, by = c("subject_id", "hadm_id")) %>%
+  print() -> study_admissions
+```
+
+Create a logical variable indicating whether MI is the principal diagonosis or not.
+```{r}
+study_admissions %>%
+  mutate(principal_dx = seq_num == 1) %>%
+  select(-seq_num) %>%
+  print() -> study_admissions
+```
+
+Add the severity of patients’ ailments by count the number of APR(All Payers Registry) included in the `DRG` codes in `drgcodes` table and pull the drug severity information and right-join it to our query table.
+```{r}
+tbl(con, "drgcodes") %>%
+  filter(str_detect(drg_type, "APR")) %>%
+  select(subject_id, hadm_id, drg_severity) %>%
+  right_join(study_admissions, by = c("subject_id", "hadm_id")) %>%
+  mutate(drg_severity = ifelse(is.na(drg_severity), 1, drg_severity)) %>%
+  print() -> study_admissions
+```
+
+Include the admission time `admittime`, discharge time `dischtime`, date of birth `dob`, and date of death `dod` of patients discharged from hospital.
+```{r}
+study_admissions %>%
+  left_join(
+    select(tbl(con, "admissions"),
+           subject_id, hadm_id, admittime, dischtime, hospital_expire_flag
+    ), by = c("subject_id", "hadm_id")
+  ) %>%
+  filter(hospital_expire_flag == 0) %>%
+  select(-hospital_expire_flag) %>%
+  left_join(
+    select(tbl(con, "patients"), subject_id, dob, dod),
+    by = "subject_id"
+  ) %>%
+  print(width = Inf) -> study_admissions
+```
+
+Add 30-day mortality rate as a logical viriable, `age` (at admission) variable into the table, and remove patients of 90 years and older, for their ages are artificially inflated.
+```{r}
+study_admissions %>%
+  mutate(tt_death = date_part("day", dod) - date_part("day", dischtime)) %>%
+  mutate(mortality = tt_death <= 30) %>%
+  mutate(age = date_part("year", admittime) - date_part("year", dob)) %>%
+  filter(age < 90) %>%
+  mutate(age = age - ifelse(
+    date_part("month", admittime) < date_part("month", dob) |
+      (
+        date_part("month", admittime) == date_part("month", dob) &
+          date_part("day", admittime) < date_part("day", dob)
+      ),
+    1,
+    0
+  )) %>%
+  select(-admittime, -dischtime, -dob, -dod, -tt_death) %>%
+  select(subject_id, hadm_id, age, mortality, everything()) %>%
+  print() -> study_admissions
+```
+
+Merge patients' information (insurance, gender) into target of study `study_admissions`.
+```{r}
+tbl(con, "admissions") %>%
+  select(subject_id, insurance) %>%
+  distinct() %>%
+  print() -> study_subjects
+```
+```{r}
+tbl(con, "patients") %>%
+  select(subject_id, gender) %>%
+  distinct() %>%
+  full_join(study_subjects, by = "subject_id") %>%
+  print() -> study_subjects
+```
+```{r}
+study_admissions %>%
+  left_join(study_subjects, by = "subject_id", copy = TRUE) %>%
+  print() -> study_admissions
+```
+
+Merge length of ICU stays into target of study `study_admissions`.
+```{r}
+study_admissions %>%
+  left_join(
+    select(tbl(con, "icustays"),
+           subject_id, hadm_id, los), by = c("subject_id", "hadm_id")
+  ) %>%
+  group_by(subject_id, hadm_id) %>%
+  filter(row_number() == 1) %>%
+  ungroup() %>%
+  print() -> study_admissions
+
+study_admissions = collect(study_admissions)
+study_admissions[, 4][is.na(study_admissions[, 4])] = 0
+study_admissions$mortality = as.logical(study_admissions$mortality)
+```
+
+
+Close the connection:
+```{r}
+dbDisconnect(con)
+```
+
+## CONSORT Flow Diagrams
+
+CONSORT Flow Diagrams can be used to plot the flow of data selection of a patient cohort.   
+
+```{r plot}
+# set margins and multiplot
+par(mfrow = c(1, 1))
+par(mar = c(0, 0, 0, 0))
+
+# initialise a plot device
+openplotmat()
+
+# position of boxes
+# 1st column indicates x axis position between 0 and 1
+# 2nd column indicates y axis position between 0 and 1
+# automatically assigns vertical position
+num_of_boxes <- 6
+auto_coords = coordinates(num_of_boxes)
+vert_pos = rev(auto_coords[,1])
+box_pos <- matrix(nrow = num_of_boxes, ncol = 2, data = 0)
+box_pos[1,] = c(0.20, vert_pos[1]) # 1st box
+box_pos[2,] = c(0.70, vert_pos[2]) # 2nd box
+box_pos[3,] = c(0.70, vert_pos[3]) # 3rd box
+box_pos[4,] = c(0.70, vert_pos[4])
+box_pos[5,] = c(0.70, vert_pos[5])
+box_pos[6,] = c(0.20, vert_pos[6])
+
+# content of boxes
+box_content <- matrix(nrow = num_of_boxes, ncol = 1, data = 0)
+box_content[1] = "All admissions in MIMIC-III \n n = 58,976" # 1st box
+box_content[2] = "Exclude admissions to other ICU type \n n = 51,324" # 2nd box
+box_content[3] = "Exclude patients of other disease \n n = 6,193" # 3rd box
+box_content[4] = "Exclude patients died in hospital \n n = 168"
+box_content[5] = "Exclude patients older than 90 years old \n n = 82"
+box_content[6] = "Study cohort \n n = 1,209"
+
+# adjust the size of boxes to fit content
+box_x <- c(0.20, 0.25, 0.25, 0.25, 0.25, 0.20)
+box_y <- c(0.07, 0.07, 0.07, 0.07, 0.07, 0.07)
+
+# Draw the arrows
+straightarrow(from = c(box_pos[1,1],box_pos[2,2]), to = box_pos[2,], lwd = 1)  
+straightarrow(from = c(box_pos[1,1],box_pos[3,2]), to = box_pos[3,], lwd = 1)  
+straightarrow(from = c(box_pos[1,1],box_pos[4,2]), to = box_pos[4,], lwd = 1)  
+straightarrow(from = c(box_pos[1,1],box_pos[5,2]), to = box_pos[5,], lwd = 1)  
+straightarrow(from = box_pos[1,], to = box_pos[6,], lwd = 1)
+
+# Draw the boxes
+for (i in 1:num_of_boxes) {
+  textrect(mid = box_pos[i,], radx = box_x[i], rady = box_y[i], 
+           lab = box_content[i], 
+           shadow.col = "grey")
+  }
+```
+
+# Data Visualization
+
+In this part, the correlation between a certain feature of patients and the 30-day mortality rate will be displayed, based on MIMIC-III data.
+
+## Age of Patients
+Display how the mortality rate affected by age of patients.
+```{r}
+ggplot(data = study_admissions) + 
+  geom_bar(mapping = aes(x = age, fill = mortality), position = "fill") +
+  theme(legend.position="bottom") +
+  scale_fill_discrete(name="Death within 30 days after hospital discharge") +
+  labs(y = "Mortality rate")
+```
+
+## Gender of Patients
+Display how the mortality rate affected by gender of patients.
+```{r}
+ggplot(data = study_admissions) + 
+  geom_bar(mapping = aes(x = gender, fill = mortality), position = "fill") +
+  theme(legend.position="bottom") +
+  scale_fill_discrete(name="Death within 30 days after hospital discharge") +
+  labs(y = "Mortality rate")
+```
+
+## Insurance type of patients
+Display how the mortality rate affected by insurance type of patients.
+```{r}
+ggplot(data = study_admissions) + 
+  geom_bar(mapping = aes(x = insurance, fill = mortality), position = "fill") +
+  theme(legend.position="bottom") +
+  scale_fill_discrete(name="Death within 30 days after hospital discharge") +
+  labs(y = "Mortality rate")
+```
+
+## Drug severity information of patients
+Display how the mortality rate affected by drug severity information of Patients.
+```{r}
+ggplot(data = study_admissions) + 
+  geom_bar(mapping = aes(x = drg_severity, fill = mortality), position = "fill") +
+  theme(legend.position="bottom") +
+  scale_fill_discrete(name="Death within 30 days after hospital discharge") +
+  labs(y = "Mortality rate") +
+  labs(x = "Drug severity information of patients")
+```
+
+## Long title of patient's disease
+Display the portion of each disease in died patients.
+```{r}
+study_admissions %>%
+  filter(mortality == TRUE) %>%
+  ggplot(mapping = aes(x = "",
+                       fill = long_title)) + 
+  geom_bar(width = 1) + 
+  coord_polar("y") +
+  # theme(legend.position="bottom") +
+  scale_fill_discrete(name="Long title of patient's disease") +
+  labs(x = "", y = "", title = "Death within 30 days") 
+```
+
+## Myocardia infraction is the principle disease or not
+Display how the mortality rate affected by whether myocardia infraction is the principle disease or not.
+```{r}
+ggplot(data = study_admissions) + 
+  geom_bar(mapping = aes(x = principal_dx, fill = mortality), position = "fill") +
+  theme(legend.position="bottom") +
+  scale_fill_discrete(name="Death within 30 days after hospital discharge") +
+  labs(y = "Mortality rate") +
+  labs(x = "Myocardia infraction is the principle disease or not")
+```
+
+## Length of ICU stay
+Display the correlation between length of ICU stay and number of death within 30 days after hosipital discharge.
+```{r}
+study_admissions %>%
+  filter(mortality == TRUE) %>%
+  ggplot(aes(x = los)) +
+  geom_freqpoly(bins = 100) + 
+  labs(x = "Length of ICU stay", y = "Number of death 
+       within 30 days after hospital discharge")
+```
+
+# Analytics
+
+According to the visualiztion of data, durg serverity information and age of patients and the length of ICU stay are selected as main factors of 30-day motality rate after hospital discharge because of the large difference between 30-day mortality rates of different durg serverities, length of ICU stays and ages.
+
+## Logistic Regression Using the Generalized Linear Model Function
+
+### Generate description for variables
+This dataset has a binary response (outcome, dependent) variable mortality. There are three predictor variables: age, lenth of ICU stay and drug severity. Treat the variables age, lenth of ICU stay as continuous. The variable drug severity takes on the values 1 through 4. Get basic descriptives for the entire data set by using summary.
+```{r}
+study_admissions$mortality = as.integer(study_admissions$mortality)
+study_admissions_ = study_admissions
+study_admissions_$drg_severity <- factor(study_admissions_$drg_severity)
+study_logit <- glm(mortality ~ age + drg_severity + los, 
+                   data = study_admissions_, 
+                   family = "binomial")
+(summary(study_logit))
+```
+According to the output of GLM, the deviance residuals are shown, which are a measure of model fit. This part of output shows the distribution of the deviance residuals for individual cases used in the model. Then use summaries of the deviance statistic to assess model fit. The next part of the output shows the coefficients, their standard errors, the z-statistic (sometimes called a Wald z-statistic), and the associated p-values. Both gre and gpa are statistically significant, as are the three terms for rank. 
+
+The logistic regression coefficients give the change in the log odds of the outcome for a one unit increase in the predictor variable:
+-For every one unit change in age, the log odds of motality increases by 0.06648.
+-For a one unit increase in length of ICU stay, the log odds of mortality increases by 0.096264.
+-Having a drug severity of 2, versus drug severity of 1, changes the log odds of motality by -1.284235.
+
+### Obtain confidence intervals
+Use the confint function to obtain confidence intervals for the coefficient estimates. Note that for logistic models, confidence intervals are based on the profiled log-likelihood function. Get CIs based on just the standard errors by using the default method.
+```{r}
+confint(study_logit)
+```
+
+### Predict 30-day mortality rate
+Calculate the predicted probability of admission at each value of rank, holding length of ICU stay at its mean. Generate the predicted probabilities (the first line below) and ask for standard errors to plot a confidence interval. Get the estimates on the link scale and back transform both the predicted values and confidence limits into probabilities.
+```{r}
+testdata1 <- with(study_admissions_, data.frame(age = rep(seq(from = 0, 
+                                                                    to = 100,
+                                                            length.out = 100),4
+                                                         ),
+                                                 los = mean(los), 
+                                                 drg_severity = factor(rep(1:4, 
+                                                                    each = 100)
+                                                            )
+                                              ))
+testdata2 <- cbind(testdata1, predict(study_logit,
+                                      newdata = testdata1, 
+                                      type = "link",
+    se = TRUE))
+(testdata2 <- within(testdata2, {
+    Predicted_Mortality <- plogis(fit)
+    LL <- plogis(fit - (1.96 * se.fit))
+    UL <- plogis(fit + (1.96 * se.fit))
+}))
+```
+
+Use graphs of predicted probabilities to understand present the model. Below is a plot with the predicted 30_day mortality rate verses age of patients, comparing different drug serverities, with 95% confidence intervals.
+```{r}
+ggplot(testdata2, aes(x = age, y = Predicted_Mortality)) + 
+  geom_ribbon(aes(ymin = LL, ymax = UL, fill = drg_severity), alpha = 0.2) + 
+  geom_line(aes(colour = drg_severity), size = 1)
+```
+
+## Neural Network with Multi-Layer Perceptron
+
+### Prepare data
+Aquire data and separate the data set to training and test data.
+```{r}
+study_admissions$mortality = as.integer(study_admissions$mortality)
+x_matrix = as.matrix(select(study_admissions, age, los, drg_severity))
+y_matrix = as.matrix(select(study_admissions, mortality))
+x_train = x_matrix[2:1000, ]
+x_test = x_matrix[1000:1209, ]
+dim(x_train)
+dim(x_test)
+
+y_train = y_matrix[2:1000]
+y_train <- array_reshape(y_train, c(999, 1))
+y_test = y_matrix[1000:1209]
+y_test <- array_reshape(y_test, c(210, 1))
+dim(y_train)
+dim(y_test)
+```
+
+Encode y as binary class matrix:
+```{r}
+y_train <- to_categorical(y_train, 2)
+y_test <- to_categorical(y_test, 2)
+dim(y_train)
+dim(y_test)
+```
+
+### Define the model
+Define a sequential model:
+```{r}
+model <- keras_model_sequential() 
+model %>% 
+  layer_dense(units = 3, activation = 'relu', input_shape = c(3)) %>%
+  layer_dropout(rate = 0) %>%
+  layer_dense(units = 2, activation = 'softmax', input_shape = c(3))
+model %>% save_model_tf("model")
+summary(model)
+```
+
+### Compile the model
+Compile the model with appropriate loss function, optimizer, and metrics:
+```{r}
+model %>% compile(
+  loss = 'categorical_crossentropy',
+  optimizer = optimizer_rmsprop(),
+  metrics = c('accuracy')
+)
+```
+
+### Training and validation
+```{r}
+history <- model %>% fit(
+  x_train, y_train,
+  epochs = 20, batch_size = NULL,
+  validation_split = 0.2
+)
+
+plot(history)
+```
+
+### Evaluate model performance on the test data:
+```{r}
+model %>% evaluate(x_test, y_test)
+```
+The loss of data is high. The possible reason is the epoch is higher than enough, so that the model is over-trained. However, after several tries to cut down the loss by decreasing the epoch, it ends up with higher data loss.
+
+### Generate predictions on new data:
+```{r}
+model %>% predict_classes(x_test) %>% head()
+```
+0 value in the prediction means that none of these patients will be died in 30 days after hospital discharge.
+
+## Conclusion
+
+In the beginning of this research, it is assumed that there are multiple factors that influence the 30-day mortality rate of patients after hospital discharge: age and gender of patients, insurance type, drug severity information, the specific disease, whether myocardia infraction is the principle disease or not, length of ICU stay are discussed to simulate the possible 30-day mortality rate of a myocardia infraction patient with certain features. However, according to the visualiztion of data, durg serverity information and age of patients and the length of ICU stay are selected as main factors of 30-day motality rate after hospital discharge, because different value of these variable leads to different 30-day mortality rates. The result of this simulization is that:
+
+-Increasement of the patient's age increases the 30-day motality rate by 1.07 times.
+-Increasement of length of ICU stay increases the 30-day motality rate by 1.10 times.
+-Having a drug severity of 2, versus drug severity of 1, decreases the 30-day motality rate by 1.28.
+-Neural network with multi-layer perceptron is about 86% accurate with about 50% loss of data.
